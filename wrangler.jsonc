@@ -1,0 +1,65 @@
+/**
+ * Resonant Worker configuration.
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ *
+ * Bindings
+ *   HYPERDRIVE  PostgreSQL via Hyperdrive. `localConnectionString` is used by
+ *               `npm run dev` and points at the embedded dev database
+ *               (`npm run db:local`). Replace `id` per environment with the
+ *               output of `wrangler hyperdrive create`.
+ *   PASSWORD_AUTH "on" | "off". "off" hides email-and-password sign-up, login,
+ *               reset and password changes (shown as "in development"), leaving
+ *               Google as the way in. Argon2id needs ~200 ms CPU, more than the
+ *               Workers Free plan allows; turn it "on" on the Paid plan.
+ *   MEDIA       Private R2 bucket for uploads. Objects are served only through
+ *               the Worker (/media/:id); never make the bucket public.
+ *
+ * Secrets (set with `wrangler secret put <NAME> --env <env>`; for local dev use
+ * an ignored .dev.vars file — see .dev.vars.example):
+ *   APP_SECRET            >= 32 random bytes; keys rate-limit HMACs.
+ *   TURNSTILE_SECRET_KEY  optional; enables Turnstile with TURNSTILE_SITE_KEY.
+ *   RESEND_API_KEY        optional; enables password-reset email with MAIL_FROM.
+ *   GOOGLE_CLIENT_ID      optional; with GOOGLE_CLIENT_SECRET enables "Continue with Google".
+ *   GOOGLE_CLIENT_SECRET  optional; redirect URI is https://<host>/auth/google/callback.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "resonant",
+  "compatibility_date": "2026-11-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./workers/app.ts",
+  "observability": { "enabled": true },
+  "upload_source_maps": true,
+  "triggers": { "crons": ["17 3 * * *"] },
+  "vars": {
+    "APP_ENV": "development",
+    "PASSWORD_AUTH": "on",
+    "TURNSTILE_SITE_KEY": "",
+    "MAIL_FROM": ""
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000",
+      "localConnectionString": "postgres://resonant:resonant@127.0.0.1:54329/resonant"
+    }
+  ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "resonant-media-dev" }],
+
+  "env": {
+    "preview": {
+      "name": "resonant-preview",
+      "vars": { "APP_ENV": "preview", "PASSWORD_AUTH": "off", "TURNSTILE_SITE_KEY": "", "MAIL_FROM": "" },
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "REPLACE_WITH_PREVIEW_HYPERDRIVE_ID" }],
+      "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "resonant-media-preview" }],
+      "triggers": { "crons": ["17 3 * * *"] }
+    },
+    "production": {
+      "name": "resonant",
+      "vars": { "APP_ENV": "production", "PASSWORD_AUTH": "off", "TURNSTILE_SITE_KEY": "", "MAIL_FROM": "" },
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "REPLACE_WITH_PRODUCTION_HYPERDRIVE_ID" }],
+      "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "resonant-media" }],
+      "triggers": { "crons": ["17 3 * * *"] }
+    }
+  }
+}

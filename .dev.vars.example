@@ -1,0 +1,14 @@
+# Copy to .dev.vars (git-ignored) for local development.
+# Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+APP_SECRET=replace-with-32-random-bytes
+
+# Optional: Cloudflare Turnstile (both must be set to enable).
+# TURNSTILE_SECRET_KEY=
+
+# Optional: Google sign-in (OAuth client of type "Web application"; authorised
+# redirect URI: http://localhost:5173/auth/google/callback for local dev).
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+
+# Optional: password-reset email via Resend (MAIL_FROM is a var in wrangler.jsonc).
+# RESEND_API_KEY=
