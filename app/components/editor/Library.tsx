@@ -45,7 +45,7 @@ export function Library({ onInsert, disabled, theme }: { onInsert: (preset: Comp
       <p className="text-[0.75rem] text-faint">Drag onto the page, or select to add below the current block.</p>
       <p className="sr-only" aria-live="polite">{shown.length} components</p>
       {shown.length === 0 ? <p className="py-6 text-center text-sm text-faint">Nothing matches “{query}”.</p> : null}
-      <ul className="grid min-w-0 grid-cols-2 gap-1.5">
+      <ul className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-1.5">
         {shown.map((c) => <LibraryItem key={c.id} preset={c} onInsert={onInsert} disabled={disabled} theme={theme} previewStyle={previewStyle} />)}
       </ul>
     </div>

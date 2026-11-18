@@ -34,7 +34,7 @@ interface Props {
  * Keep in sync with the "Card effects" selector list in profile.css.
  */
 const CARD_SELECTOR =
-  ".rp-link, .rp-btn, .rp-social, .rp-project, .rp-video, .rp-callout, .rp-quote[data-variant='card'], .rp-faq details, .rp-stat, .rp-contact, .rp-countdown, .rp-clock, .rp-intro[data-variant='card'], .rp-gallery li, .rp-figure";
+  ".rp-link, .rp-btn, .rp-social, .rp-project, .rp-video, .rp-callout, .rp-quote[data-variant='card'], .rp-faq-item, .rp-stat, .rp-contact, .rp-countdown, .rp-clock, .rp-intro[data-variant='card'], .rp-gallery li, .rp-figure";
 /** Card effects that follow the pointer (the rest are pure CSS :hover). */
 const POINTER_CARD_EFFECTS = new Set(["tilt", "glare", "holo", "depth", "magnetic", "spotlight", "border"]);
 
@@ -507,7 +507,7 @@ export function BlockView({ block, mode }: { block: Block; mode: ProfileMode }) 
     case "contact": return <ContactBlock block={block} mode={mode} />;
     case "countdown": return <CountdownBlock block={block} mode={mode} />;
     case "marquee": return <MarqueeBlock block={block} />;
-    case "faq": return <FaqBlock block={block} />;
+    case "faq": return <FaqBlock block={block} mode={mode} />;
     case "callout": return <CalloutBlock block={block} mode={mode} />;
     case "code": return <CodeBlock block={block} mode={mode} />;
     case "clock": return <ClockBlock block={block} mode={mode} />;
@@ -588,7 +588,7 @@ function IntroBlock({ block, mode }: { block: BlockOf<"intro">; mode: ProfileMod
         {block.badge ? (
           <p className="rp-badge"><span aria-hidden="true" className="rp-badge-dot" />{block.badge}</p>
         ) : null}
-        <h1 className="rp-name">{block.name}</h1>
+        <h1 className="rp-name"><span className="rp-name-text">{block.name}</span></h1>
         {block.tagline ? <p className="rp-tagline">{block.tagline}</p> : null}
         {block.bio ? <p className="rp-bio">{block.bio}</p> : null}
       </div>
@@ -682,8 +682,10 @@ function TabsBlock({ block, mode }: { block: BlockOf<"tabs">; mode: ProfileMode 
   const current = block.tabs[Math.min(active, block.tabs.length - 1)];
   return (
     <div className="rp-tabs">
-      <div role="tablist" aria-label="Link groups" className="rp-tablist">
-        {block.tabs.map((tab, t) => (
+      <div role={interactive ? "tablist" : undefined} aria-label={interactive ? "Link groups" : undefined} className="rp-tablist">
+        {block.tabs.map((tab, t) => !interactive ? (
+          <span key={t} data-selected={t === active || undefined}>{tab.label}</span>
+        ) : (
           <button
             key={t}
             type="button"
@@ -702,7 +704,7 @@ function TabsBlock({ block, mode }: { block: BlockOf<"tabs">; mode: ProfileMode 
           </button>
         ))}
       </div>
-      <div id={`${block.id}-panel`} role="tabpanel" aria-labelledby={`${block.id}-tab-${active}`} className="rp-stack">
+      <div id={interactive ? `${block.id}-panel` : undefined} role={interactive ? "tabpanel" : undefined} aria-labelledby={interactive ? `${block.id}-tab-${active}` : undefined} className="rp-stack">
         {current.links.length === 0 ? <p className="rp-text" data-variant="centered">No links in this tab yet.</p> : null}
         {current.links.map((l, i) => (
           <A key={`${active}-${i}`} url={l.url} blockId={block.id} mode={mode} className="rp-link rp-hoverable" data-variant="default">
@@ -942,16 +944,24 @@ function MarqueeBlock({ block }: { block: BlockOf<"marquee"> }) {
   );
 }
 
-function FaqBlock({ block }: { block: BlockOf<"faq"> }) {
+function FaqBlock({ block, mode }: { block: BlockOf<"faq">; mode: ProfileMode }) {
+  // Thumbnails sit inside buttons and links, so they use non-interactive elements.
+  const thumb = mode === "thumbnail";
   return (
     <section className="rp-faq" aria-label={block.title || "Questions"}>
       {block.title ? <h2 className="rp-heading" data-variant="label">{block.title}</h2> : null}
-      {block.items.map((item, i) => (
-        <details key={i}>
-          <summary>{item.q}</summary>
-          <p>{item.a}</p>
-        </details>
-      ))}
+      {block.items.map((item, i) =>
+        thumb ? (
+          <div key={i} className="rp-faq-item">
+            <div className="rp-faq-q">{item.q}</div>
+          </div>
+        ) : (
+          <details key={i} className="rp-faq-item">
+            <summary className="rp-faq-q">{item.q}</summary>
+            <p>{item.a}</p>
+          </details>
+        ),
+      )}
     </section>
   );
 }

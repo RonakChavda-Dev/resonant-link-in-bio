@@ -192,7 +192,7 @@
 }
 
 /* Giant faded wordmark in the footer */
-.wordmark { font-weight: 700; letter-spacing: -0.06em; line-height: .8; font-size: clamp(5rem, 19vw, 17rem); color: transparent; -webkit-text-stroke: 1px rgb(255 255 255 / .14); background: linear-gradient(rgb(255 255 255 / .09), transparent 85%); -webkit-background-clip: text; background-clip: text; user-select: none; white-space: nowrap; }
+.wordmark { font-weight: 700; letter-spacing: -0.06em; line-height: .8; font-size: clamp(3rem, 17vw, 17rem); color: transparent; -webkit-text-stroke: 1px rgb(255 255 255 / .14); background: linear-gradient(rgb(255 255 255 / .09), transparent 85%); -webkit-background-clip: text; background-clip: text; user-select: none; white-space: nowrap; }
 
 /* Footer wordmark glint: light follows the mouse across the letters */
 .wordmark-wrap { position: relative; display: inline-block; }
@@ -218,3 +218,26 @@
   transform: translate3d(calc(var(--px, 0) * -40px), calc(var(--py, 0) * -30px), -160px); transition: transform .6s cubic-bezier(0.22, 1, 0.36, 1); }
 .tilt-card[data-tilting] :is(.tilt-shadow, .tilt-ambient) { transition-duration: .2s; }
 @media (prefers-reduced-motion: reduce) { .tilt-card, .tilt-shadow, .tilt-ambient { transform: none !important; } }
+
+/* --- Mobile menu ---------------------------------------------------------- */
+.menu-toggle { gap: .55rem; }
+.menu-icon { position: relative; width: 14px; height: 10px; }
+.menu-icon span { position: absolute; left: 0; width: 100%; height: 1.5px; border-radius: 2px; background: currentColor; transition: transform .35s var(--ease-out-quint), top .35s var(--ease-out-quint); }
+.menu-icon span:first-child { top: 1.5px; }
+.menu-icon span:last-child { top: 7px; }
+.menu-toggle[aria-expanded="true"] .menu-icon span { top: 4.25px; }
+.menu-toggle[aria-expanded="true"] .menu-icon span:first-child { transform: rotate(45deg); }
+.menu-toggle[aria-expanded="true"] .menu-icon span:last-child { transform: rotate(-45deg); }
+/* Label rolls between "Menu" and "Close"; the wider word sets the width. */
+.menu-label { display: inline-grid; overflow: hidden; height: 1.25em; line-height: 1.25em; }
+.menu-label > span { grid-area: 1 / 1; transition: transform .4s var(--ease-out-quint), opacity .3s; }
+.menu-label > span:last-child { transform: translateY(100%); opacity: 0; }
+.menu-toggle[aria-expanded="true"] .menu-label > span:first-child { transform: translateY(-100%); opacity: 0; }
+.menu-toggle[aria-expanded="true"] .menu-label > span:last-child { transform: none; opacity: 1; }
+
+.mobile-nav { display: grid; grid-template-rows: 0fr; border-top: 1px solid transparent; transition: grid-template-rows .45s var(--ease-out-quint), border-color .3s, visibility 0s .45s; visibility: hidden; }
+.mobile-nav[data-open] { grid-template-rows: 1fr; border-top-color: var(--color-line); transition: grid-template-rows .45s var(--ease-out-quint), border-color .3s, visibility 0s; visibility: visible; }
+.mobile-nav-inner { min-height: 0; overflow: hidden; }
+.mobile-nav-item { opacity: 0; filter: blur(6px); transform: translateY(-8px); transition: opacity .25s, filter .25s, transform .25s var(--ease-out-quint); }
+.mobile-nav[data-open] .mobile-nav-item { opacity: 1; filter: none; transform: none; transition: opacity .45s var(--ease-out-quint), filter .45s var(--ease-out-quint), transform .45s var(--ease-out-quint); transition-delay: calc(60ms + var(--i, 0) * 45ms); }
+@media (min-width: 48rem) { .mobile-nav { display: none; } }

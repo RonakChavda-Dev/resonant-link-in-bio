@@ -20,7 +20,7 @@ export function loader({ context, request }: Route.LoaderArgs) {
 
 export default function WorkspaceLayout({ loaderData }: Route.ComponentProps) {
   const link = ({ isActive }: { isActive: boolean }) =>
-    `rounded-full px-3 py-1.5 text-sm transition-colors ${isActive ? "bg-white/[0.07] text-fg" : "text-dim hover:text-fg"}`;
+    `whitespace-nowrap rounded-full px-2.5 py-1.5 text-sm transition-colors sm:px-3 ${isActive ? "bg-white/[0.07] text-fg" : "text-dim hover:text-fg"}`;
   return (
     <div className="min-h-dvh">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 btn btn-volt">
@@ -41,7 +41,7 @@ export default function WorkspaceLayout({ loaderData }: Route.ComponentProps) {
             </nav>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <Link to="/settings#profile" className="flex min-w-0 items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm text-dim hover:text-fg sm:pr-3" aria-label={`Your profile: ${loaderData.displayName}`}>
+            <Link to="/settings#profile" className="hidden min-w-0 items-center min-[400px]:flex gap-2 rounded-full py-1 pl-1 pr-1 text-sm text-dim hover:text-fg sm:pr-3" aria-label={`Your profile: ${loaderData.displayName}`}>
               <Avatar mediaId={loaderData.avatarId} name={loaderData.displayName} size={28} />
               <span className="hidden max-w-[12rem] truncate sm:inline">{loaderData.displayName}</span>
             </Link>

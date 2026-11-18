@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { data, Form, Link, redirect, useBlocker, useFetcher, type ShouldRevalidateFunctionArgs } from "react-router";
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent, type DragStartEvent,
@@ -323,6 +323,8 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
   }, [saveNow]);
 
   // --- Drag and drop (library → page, reorder on canvas or in layers) ----------------
+  // dnd-kit numbers its aria ids with a global counter; a stable id keeps SSR and hydration in sync.
+  const dndId = useId();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space", "Enter"] } }),
@@ -461,7 +463,7 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
         ))}
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragLabel(null)}>
+      <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragLabel(null)}>
         <div className="flex min-h-0 flex-1">
           {/* Left: library, layers, design, page, comments */}
           <section aria-label="Edit page" className={`${mobileView === "edit" ? "flex" : "hidden"} min-h-0 w-full min-w-0 flex-col border-r border-line lg:flex lg:w-[21rem] lg:shrink-0`}>
@@ -478,7 +480,7 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
                 <button
                   key={id} id={`tab-${id}`} role="tab" type="button" aria-selected={tab === id} aria-controls="editor-tabpanel"
                   onClick={() => setTab(id)}
-                  className={`shrink-0 rounded-full px-3 py-1.5 text-[0.82rem] ${tab === id ? "bg-white/[0.08] text-fg" : "text-dim hover:text-fg"}`}
+                  className={`flex-1 shrink-0 whitespace-nowrap rounded-full px-2 py-1.5 text-[0.82rem] sm:flex-none sm:px-3 ${tab === id ? "bg-white/[0.08] text-fg" : "text-dim hover:text-fg"}`}
                 >
                   {label}
                 </button>
@@ -585,7 +587,7 @@ function StatusPill({ status }: { status: "draft" | "published" | "unpublished" 
     unpublished: ["Unpublished", "border-warn/40 text-warn"],
   } as const;
   const [label, cls] = map[status];
-  return <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.7rem] ${cls}`}>{label}</span>;
+  return <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[0.7rem] min-[400px]:inline ${cls}`}>{label}</span>;
 }
 
 function SaveIndicator({ status }: { status: SaveStatus }) {

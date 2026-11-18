@@ -23,7 +23,7 @@ export const meta: Route.MetaFunction = ({ matches }) =>
 const fan = ["sunset-mesh-peach", "notebook-paper", "glass-aurora-ocean"].map((id) => getTemplate(id)!);
 const strip = ["night-set-violet", "notebook-paper", "sunset-mesh-peach", "lowlight-dusk", "poster-lime", "glass-aurora-ocean", "confetti-bubblegum", "ember-amber", "case-study-iris", "synthwave-magenta", "electric-cobalt", "storefront-lemon"].map((id) => getTemplate(id)!);
 // The closing grid cell spans whatever is left on the last row, so the grid never shows gaps.
-const FILL_SM = ["sm:col-span-2", "sm:col-span-1"];
+const FILL_SM = ["col-span-2", "col-span-1"];
 const FILL_XL = ["xl:col-span-3", "xl:col-span-2", "xl:col-span-1"];
 const lookBase = getTemplate("halo-ash")!;
 const LOOKS: PresetId[] = ["ash", "paper", "midnight", "peach", "pine", "lilac", "cobalt", "clay", "plum", "sky", "ember", "bubblegum"].filter((p) => PRESET_IDS.includes(p as PresetId)) as PresetId[];
@@ -59,13 +59,16 @@ export default function Home() {
             <Form method="get" action="/signup" className="mt-9 max-w-lg" data-reveal style={{ "--rd": "220ms" } as CSSProperties}>
               <label htmlFor="claim" className="sr-only">Choose your handle</label>
               <div className="flex items-center rounded-full border border-line-strong bg-ink-2 p-1.5 pl-5 transition-colors focus-within:border-white/50">
-                <span className="select-none whitespace-nowrap text-[0.95rem] text-faint">{host}/@</span>
+                <span className="flex min-w-0 shrink select-none text-[0.95rem] text-faint" title={`${host}/@`}>
+                  <span className="truncate">{host}</span>
+                  <span className="shrink-0">/@</span>
+                </span>
                 <input
                   id="claim" name="handle" placeholder="yourname" autoComplete="off" spellCheck={false} maxLength={30}
                   pattern="[A-Za-z0-9_\-]{3,30}" title="3–30 letters, numbers, hyphens or underscores" size={1}
-                  className="w-0 min-w-0 flex-1 bg-transparent px-1 text-[0.95rem] text-fg placeholder:text-faint focus:outline-none"
+                  className="w-0 min-w-[5.5rem] flex-1 bg-transparent px-1 text-[0.95rem] text-fg placeholder:text-faint focus:outline-none"
                 />
-                <button type="submit" className="btn btn-volt btn-sm">Claim it</button>
+                <button type="submit" className="btn btn-volt btn-sm shrink-0">Claim it</button>
               </div>
             </Form>
             <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm" data-reveal style={{ "--rd": "300ms" } as CSSProperties}>
@@ -74,7 +77,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative mx-auto h-[34rem] w-full max-w-[30rem]" data-reveal="blur" style={{ "--rd": "160ms" } as CSSProperties}>
+          <div className="relative mx-auto h-[34rem] w-full max-w-[30rem] lg:scale-[0.82] xl:scale-100" data-reveal="blur" style={{ "--rd": "160ms" } as CSSProperties}>
             {fan.map((t, i) => (
               <Link
                 key={t.id}
@@ -136,16 +139,16 @@ export default function Home() {
             </p>
             <Link to="/features" className="btn btn-ghost mt-8">Explore the editor</Link>
           </div>
-          <ul className="grid gap-px overflow-hidden rounded-[1.4rem] border border-line bg-line sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-[1.4rem] border border-line bg-line xl:grid-cols-3">
             {BLOCK_TYPES.map((type, i) => (
-              <li key={type} className="bg-ink p-6 transition-colors hover:bg-panel" data-reveal style={{ "--rd": `${(i % 3) * 60}ms` } as CSSProperties}>
+              <li key={type} className="min-w-0 bg-ink p-4 transition-colors sm:p-6 hover:bg-panel" data-reveal style={{ "--rd": `${(i % 3) * 60}ms` } as CSSProperties}>
                 <span className="font-mono text-[0.7rem] text-faint">{String(i + 1).padStart(2, "0")}</span>
                 <h3 className="mt-3 font-medium">{BLOCK_REGISTRY[type].label}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-dim">{BLOCK_REGISTRY[type].description}</p>
+                <p className="mt-1.5 text-[0.8rem] leading-relaxed text-dim sm:text-sm">{BLOCK_REGISTRY[type].description}</p>
               </li>
             ))}
             <li
-              className={`flex flex-col justify-between gap-4 bg-ink p-6 ${FILL_SM[BLOCK_TYPES.length % 2]} ${FILL_XL[BLOCK_TYPES.length % 3]}`}
+              className={`flex flex-col justify-between gap-4 bg-ink p-4 sm:p-6 ${FILL_SM[BLOCK_TYPES.length % 2]} ${FILL_XL[BLOCK_TYPES.length % 3]}`}
               data-reveal
               style={{ "--rd": `${(BLOCK_TYPES.length % 3) * 60}ms` } as CSSProperties}
             >

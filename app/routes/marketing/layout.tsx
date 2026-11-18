@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Wordmark } from "~/components/ui/Wordmark";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { Logo } from "~/components/ui/Logo";
@@ -20,6 +20,12 @@ export default function MarketingLayout() {
     setLastPath(location.pathname);
     setOpen(false);
   }
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
     <div className="min-h-dvh flex flex-col">
@@ -65,25 +71,30 @@ export default function MarketingLayout() {
           </div>
           <button
             type="button"
-            className="md:hidden btn btn-ghost btn-sm"
+            className="md:hidden btn btn-ghost btn-sm menu-toggle"
             aria-expanded={open}
             aria-controls="mobile-nav"
             onClick={() => setOpen((v) => !v)}
           >
-            {open ? "Close" : "Menu"}
+            <span className="menu-icon" aria-hidden="true"><span /><span /></span>
+            <span className="menu-label" aria-hidden="true">
+              <span>Menu</span>
+              <span>Close</span>
+            </span>
+            <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
           </button>
         </div>
-        {open ? (
-          <nav id="mobile-nav" aria-label="Main" className="md:hidden border-t border-line">
+        <nav id="mobile-nav" aria-label="Main" className="mobile-nav md:hidden" data-open={open || undefined} inert={!open}>
+          <div className="mobile-nav-inner">
             <ul className="wrap py-3 grid gap-1">
-              {NAV.map((item) => (
-                <li key={item.to}>
+              {NAV.map((item, i) => (
+                <li key={item.to} className="mobile-nav-item" style={{ "--i": i } as CSSProperties}>
                   <NavLink to={item.to} className="block rounded-xl px-3 py-3 text-fg hover:bg-white/[0.04]">
                     {item.label}
                   </NavLink>
                 </li>
               ))}
-              <li className="flex gap-2 pt-2">
+              <li className="mobile-nav-item flex gap-2 pt-2" style={{ "--i": NAV.length } as CSSProperties}>
                 {root?.user ? (
                   <Link to="/dashboard" className="btn btn-volt flex-1">
                     Open dashboard
@@ -100,8 +111,8 @@ export default function MarketingLayout() {
                 )}
               </li>
             </ul>
-          </nav>
-        ) : null}
+          </div>
+        </nav>
       </header>
 
       <main id="main" className="flex-1">
