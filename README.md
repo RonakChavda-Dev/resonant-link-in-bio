@@ -4,9 +4,9 @@
 
 **Your page. Your whole story.**
 
-A link-in-bio and one-page portfolio builder. Pick a design, drag in blocks, publish at `/@yourname`.
+One link for everything you make: a personal page, link-in-bio and one-page portfolio in one place.
 
-[**Live site →**](https://resonant.ronakchavda-dev.workers.dev)
+[**Visit Resonant →**](https://resonant.ronakchavda-dev.workers.dev)
 
 <br />
 
@@ -16,28 +16,40 @@ A link-in-bio and one-page portfolio builder. Pick a design, drag in blocks, pub
 
 <br />
 
-## What it does
+## What is Resonant?
 
-Resonant gives creators a fast, good-looking personal page without fighting a website builder. Each page is made of structured blocks (intro, links, gallery, video, music, FAQ, custom code and more), styled by curated themes. That keeps pages quick to load, easy to read and safe to render.
+Most people end up with their work scattered everywhere: a portfolio here, a shop there, a podcast, a playlist, a few social profiles. Resonant puts it all on one page that actually feels like you, at a short address you can drop into any bio: `/@yourname`.
 
-- **Drag-and-drop editor.** Live canvas, a searchable component library, layers, undo/redo, autosave, and mobile/desktop previews. Every drag action also has keyboard controls.
-- **Hand-made templates.** 30 base designs in 120+ colourways (notebooks, glassy gradients, bold posters, editorial portfolios), all filterable by category, style and tone.
-- **Real customisation, with guard rails.** Palettes, accents, fonts, button styles, backgrounds and card effects come from design tokens, so there's no fragile user CSS.
-- **Multi-page sites and music.** Add pages as tabs or stacked cards, and a background track that only plays after a visitor clicks in.
-- **Custom code, sandboxed.** Write HTML, CSS and JS in a built-in code studio. It runs in an isolated iframe with a strict CSP.
-- **Comments.** Optional per page, signed-in visitors only, with owner moderation.
-- **Analytics without tracking.** Simple daily view and click counters per page, deleted along with the page.
+You start from a template, change whatever you like, and publish. There's no code to write and no layout to fight with, and the result looks good on a phone as well as a laptop.
+
+## Who it's for
+
+- **Creators and artists** who want one link that shows everything they make
+- **Designers and developers** who need a quick, polished one-page portfolio
+- **Musicians and podcasters** sharing releases, episodes and where to listen
+- **Small shops and makers** pointing people to products, orders and FAQs
+- **Anyone** who wants a personal corner of the internet without building a website
+
+## What you can do
+
+- **Start from a template.** 30 hand-made designs in 120+ colourways: notebooks, glassy gradients, bold posters, editorial portfolios, résumés and more.
+- **Build by dragging.** Add links, text, images, galleries, videos, music, FAQs, timelines and more from a library of ready-made pieces, then drag them into place. Every edit can be undone.
+- **Make it yours.** Change colours, fonts, buttons, backgrounds and effects without touching your content.
+- **Add more pages.** Turn your page into a small site with tabs or stacked sections, and add a background song if you like.
+- **Go further with custom code.** Write your own HTML, CSS and JavaScript in a built-in code studio when the blocks aren't enough.
+- **Let people talk back.** Turn on comments for your page, and hide or remove any of them.
+- **See what's working.** Simple daily counts of views and link clicks.
 
 <br />
 
 <table>
   <tr>
-    <td width="68%"><img src="docs/images/editor.png" alt="The Resonant editor with layers on the left, a live page preview in the middle and the link block inspector on the right" /></td>
+    <td width="68%"><img src="docs/images/editor.png" alt="The Resonant editor with layers on the left, a live page preview in the middle and the link block settings on the right" /></td>
     <td width="32%"><img src="docs/images/mobile.png" alt="The Resonant home page on a phone-sized screen" /></td>
   </tr>
   <tr>
-    <td align="center"><sub>The editor: layers, live canvas, inspector</sub></td>
-    <td align="center"><sub>Built for narrow screens first</sub></td>
+    <td align="center"><sub>The editor: pick a block, edit it, see it live</sub></td>
+    <td align="center"><sub>Made for phones first</sub></td>
   </tr>
 </table>
 
@@ -47,73 +59,20 @@ Resonant gives creators a fast, good-looking personal page without fighting a we
     <td width="50%"><img src="docs/images/template.png" alt="A single template page showing colourway swatches and a live preview" /></td>
   </tr>
   <tr>
-    <td align="center"><sub>Browse and filter templates</sub></td>
-    <td align="center"><sub>Preview each colourway before you start</sub></td>
+    <td align="center"><sub>Browse templates by category, style and tone</sub></td>
+    <td align="center"><sub>Try every colourway before you start</sub></td>
   </tr>
 </table>
 
 <sub>All names and links in the screenshots are fictional sample content.</sub>
 
-## Built with
+## Private by default
 
-| | |
-|---|---|
-| **App** | React Router v8 (framework mode), TypeScript, Tailwind CSS v4 |
-| **Runtime** | Cloudflare Workers via `@cloudflare/vite-plugin` |
-| **Data** | PostgreSQL through Cloudflare Hyperdrive (`postgres.js`, plain SQL migrations, no ORM) |
-| **Storage** | Cloudflare R2 for uploads (size limits + file-signature checks) |
-| **Validation** | Zod v4 schemas shared by editor and server |
-| **Editor** | `@dnd-kit`, CodeMirror (loaded on demand) |
+Resonant is built to collect as little as possible. Visitors who aren't signed in get no cookies, and view counts are kept without IP addresses or device identifiers. Your drafts stay private until you publish, and you can take your page offline whenever you want. The [privacy](https://resonant.ronakchavda-dev.workers.dev/privacy) and [security](https://resonant.ronakchavda-dev.workers.dev/security) pages explain it all in plain language.
 
-## Security, briefly
+## License
 
-No app is attack-proof, so here's what Resonant actually does:
-
-- Server-side sessions in `HttpOnly` cookies, with idle and absolute expiry and rotation on sign-in
-- Two CSRF layers: an Origin / `Sec-Fetch-Site` check plus per-session tokens
-- A strict per-request CSP nonce and the usual security headers
-- Ownership checks on every write, and parameterised SQL everywhere
-- Rate limits on sign-in, sign-up, publishing and comments
-- Google sign-in via OIDC + PKCE, and Argon2id password hashing
-
-The full write-up is on the site's [`/security`](https://resonant.ronakchavda-dev.workers.dev/security) and [`/privacy`](https://resonant.ronakchavda-dev.workers.dev/privacy) pages.
-
-## Running it locally
-
-You'll need Node.js 22+.
-
-```sh
-npm install
-cp .dev.vars.example .dev.vars   # then set APP_SECRET to 32+ random bytes
-
-npm run db:local                 # embedded Postgres; keep this terminal open
-npm run db:migrate               # in a second terminal
-npm run dev                      # http://localhost:5173
-```
-
-Useful scripts:
-
-```sh
-npm run typecheck   # wrangler types + route typegen + tsc
-npm test            # vitest unit tests
-npm run build && npx vite preview --port 4173   # production build in workerd
-```
-
-## Deploying
-
-Deploys go through `npm run deploy:preview` or `npm run deploy:production`. These scripts build with the right `CLOUDFLARE_ENV`, because the Cloudflare Vite plugin bakes the environment in at build time. If you use Cloudflare Workers Builds (deploy on push), set `CLOUDFLARE_ENV=production` as a build variable.
-
-## Project layout
-
-```
-app/
-  routes/          marketing pages, auth, workspace (dashboard, editor, settings), public profiles
-  components/      ProfileView (the one renderer for every page), editor panels, UI
-  lib/             block schemas, themes, backdrops, templates, URL safety
-  server/          the only code that touches the database, R2, secrets or crypto
-workers/app.ts     Worker entry: CSRF origin check, CSP, security headers
-migrations/        plain SQL, applied in order
-```
+Resonant is open source under the [MIT License](LICENSE).
 
 <div align="center">
 <br />
