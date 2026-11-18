@@ -42,6 +42,8 @@ export function useRootData() {
 export const links: Route.LinksFunction = () => [
   // Bump ?v= whenever favicon.svg changes; browsers cache favicons aggressively.
   { rel: "icon", href: "/favicon.svg?v=2", type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+  { rel: "manifest", href: "/manifest.webmanifest" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

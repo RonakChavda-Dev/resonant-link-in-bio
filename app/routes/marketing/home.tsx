@@ -2,7 +2,7 @@ import { useMemo, useState, type CSSProperties } from "react";
 import { ScrollStrip } from "~/components/ui/ScrollStrip";
 import { Form, Link } from "react-router";
 import type { Route } from "./+types/home";
-import { seo } from "~/lib/seo";
+import { rootOrigin, seo, SITE_NAME } from "~/lib/seo";
 import { getTemplate, TEMPLATE_BASE_COUNT, TEMPLATE_COUNT } from "~/lib/templates";
 import { BLOCK_CATEGORIES, BLOCK_REGISTRY, BLOCK_TYPES } from "~/lib/block-registry";
 import { COMPONENT_COUNT } from "~/lib/components";
@@ -13,12 +13,22 @@ import { WheelPicker } from "~/components/ui/WheelPicker";
 import { NightClouds } from "~/components/ui/NightClouds";
 import { useRootData } from "~/root";
 
-export const meta: Route.MetaFunction = ({ matches }) =>
-  seo(matches, {
-    title: "Resonant — your personal page, portfolio and profile in one",
-    description: `Build a personal profile or one-page portfolio with ${COMPONENT_COUNT} drag-and-drop components and ${TEMPLATE_COUNT} templates. Publish to your own @handle.`,
-    path: "/",
-  });
+export const meta: Route.MetaFunction = ({ matches }) => {
+  const origin = rootOrigin(matches);
+  const description = `Build a personal profile or one-page portfolio with ${COMPONENT_COUNT} drag-and-drop components and ${TEMPLATE_COUNT} templates. Publish to your own @handle.`;
+  return [
+    ...seo(matches, { title: "Resonant — your personal page, portfolio and profile in one", description, path: "/" }),
+    {
+      "script:ld+json": {
+        "@context": "https://schema.org",
+        "@graph": [
+          { "@type": "WebSite", "@id": `${origin}/#website`, url: `${origin}/`, name: SITE_NAME, description, publisher: { "@id": `${origin}/#org` } },
+          { "@type": "Organization", "@id": `${origin}/#org`, name: SITE_NAME, url: `${origin}/`, logo: `${origin}/icon-512.png` },
+        ],
+      },
+    },
+  ];
+};
 
 const fan = ["sunset-mesh-peach", "notebook-paper", "glass-aurora-ocean"].map((id) => getTemplate(id)!);
 const strip = ["night-set-violet", "notebook-paper", "sunset-mesh-peach", "lowlight-dusk", "poster-lime", "glass-aurora-ocean", "confetti-bubblegum", "ember-amber", "case-study-iris", "synthwave-magenta", "electric-cobalt", "storefront-lemon"].map((id) => getTemplate(id)!);

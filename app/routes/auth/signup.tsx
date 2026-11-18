@@ -1,6 +1,6 @@
 import { data, Form, Link, redirect, useNavigation, useSearchParams } from "react-router";
 import type { Route } from "./+types/signup";
-import { privateMeta } from "~/lib/seo";
+import { privateMeta, seo } from "~/lib/seo";
 import { Field, FormError, Turnstile } from "~/components/ui/forms";
 import { db, getEnv } from "~/server/db.server";
 import { sessionContext } from "~/server/context";
@@ -17,10 +17,8 @@ import { safeRedirectPath } from "~/lib/safe-redirect";
 import { googleConfigured } from "~/server/oauth.server";
 import { GoogleButton, OrDivider, PasswordsInDevelopment } from "~/components/ui/GoogleButton";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "Create your account · Resonant" },
-  { name: "description", content: "Create a Resonant account to build and publish your page." },
-];
+export const meta: Route.MetaFunction = ({ matches }) =>
+  seo(matches, { title: "Create your account · Resonant", description: "Create a Resonant account to build and publish your page.", path: "/signup" });
 
 function nextStep(params: URLSearchParams) {
   const explicit = params.get("next");

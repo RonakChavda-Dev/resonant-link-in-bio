@@ -1,5 +1,6 @@
 import { data, Form, Link, redirect, useNavigation, useSearchParams } from "react-router";
 import type { Route } from "./+types/login";
+import { seo } from "~/lib/seo";
 import { Field, FormError, Turnstile } from "~/components/ui/forms";
 import { db, getEnv } from "~/server/db.server";
 import { sessionContext } from "~/server/context";
@@ -12,10 +13,8 @@ import { emailKey, findUserByEmail, normalizeEmail } from "~/server/users.server
 import { googleConfigured } from "~/server/oauth.server";
 import { GoogleButton, OAUTH_ERRORS, OrDivider, PasswordsInDevelopment } from "~/components/ui/GoogleButton";
 
-export const meta: Route.MetaFunction = () => [
-  { title: "Log in · Resonant" },
-  { name: "description", content: "Log in to edit and publish your Resonant page." },
-];
+export const meta: Route.MetaFunction = ({ matches }) =>
+  seo(matches, { title: "Log in · Resonant", description: "Log in to edit and publish your Resonant page.", path: "/login" });
 
 export function loader({ context, request }: Route.LoaderArgs) {
   const next = safeRedirectPath(new URL(request.url).searchParams.get("next"));

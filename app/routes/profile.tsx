@@ -6,7 +6,7 @@ import { data, Form, Link, redirect, useNavigation } from "react-router";
 import type { Route } from "./+types/profile";
 import { HANDLE_PATTERN, normalizeHandle, profilePath } from "~/lib/handles";
 import { profileDescription, profileTitle } from "~/lib/block-registry";
-import { rootOrigin } from "~/lib/seo";
+import { defaultShareImage, rootOrigin, shareImageTags, SITE_NAME } from "~/lib/seo";
 import { mediaUrl, ProfileView } from "~/components/profile/ProfileView";
 import { LogoMark } from "~/components/ui/Logo";
 import { CsrfInput } from "~/components/ui/forms";
@@ -94,7 +94,13 @@ export const meta: Route.MetaFunction = ({ loaderData, matches }) => {
   const siteTitle = profileTitle(loaderData.doc, loaderData.handle);
   const title = loaderData.page ? `${loaderData.page.title} · ${siteTitle}` : siteTitle;
   const description = profileDescription(loaderData.doc);
-  const url = rootOrigin(matches) + loaderData.canonicalPath;
+  const origin = rootOrigin(matches);
+  const url = origin + loaderData.canonicalPath;
+  const { doc, handle } = loaderData;
+  const intro = doc.blocks.find((b) => b.type === "intro");
+  const avatar = intro?.avatar ? origin + mediaUrl(intro.avatar) : null;
+  // Only links the owner published in a Social links block, and only web addresses.
+  const sameAs = doc.blocks.flatMap((b) => (b.type === "socials" ? b.items.map((i) => i.url) : [])).filter((u) => /^https?:\/\//i.test(u));
   return [
     { title },
     { name: "description", content: description },
@@ -103,7 +109,31 @@ export const meta: Route.MetaFunction = ({ loaderData, matches }) => {
     { property: "og:description", content: description },
     { property: "og:url", content: url },
     { property: "og:type", content: "profile" },
-    { name: "twitter:card", content: "summary" },
+    { property: "og:site_name", content: SITE_NAME },
+    { property: "profile:username", content: handle },
+    { name: "twitter:title", content: title },
+    { name: "twitter:description", content: description },
+    ...shareImageTags(
+      origin,
+      avatar ? { url: avatar, alt: `${siteTitle}'s profile picture`, size: "small" } : defaultShareImage(),
+    ),
+    {
+      "script:ld+json": {
+        "@context": "https://schema.org",
+        "@type": "ProfilePage",
+        url,
+        name: title,
+        mainEntity: {
+          "@type": "Person",
+          name: intro?.name || `@${handle}`,
+          alternateName: `@${handle}`,
+          description,
+          url: origin + profilePath(handle),
+          ...(avatar ? { image: avatar } : {}),
+          ...(sameAs.length ? { sameAs } : {}),
+        },
+      },
+    },
     { name: "robots", content: loaderData.indexable ? "index, follow" : "noindex, nofollow" },
     { name: "theme-color", content: "#0b0c0b" },
   ];
