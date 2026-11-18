@@ -22,3 +22,5 @@ worker-configuration.d.ts
 # Local logs and screenshots
 *.log
 /.shots/
+.neon
+.env.local

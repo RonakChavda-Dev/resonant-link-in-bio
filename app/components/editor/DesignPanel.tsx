@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { ThemeSettings, EffectSettings, BackgroundSettings } from "~/lib/themes";
 import {
-  ACCENTS, ACCENT_IDS, BUTTON_LABELS, BUTTON_STYLES, ENTRANCES, FONTS, FONT_IDS, HOVERS, NAME_STYLES, OVERLAYS, PRESETS, PRESET_IDS,
+  ACCENTS, ACCENT_IDS, BUTTON_LABELS, BUTTON_STYLES, CARD_EFFECTS, CARD_EFFECT_LABELS, ENTRANCES, FONTS, FONT_IDS, HOVERS, NAME_STYLES, OVERLAYS, PRESETS, PRESET_IDS,
 } from "~/lib/themes";
 import { Segmented, SelectControl, SliderControl, Toggle } from "./controls";
 import { BackdropPicker, type MediaContext } from "./BlockForms";
@@ -113,7 +113,7 @@ export function DesignPanel({
           </>
         )}
         <Toggle label="Animate background" description="Slow drift or pan for backgrounds that support it." checked={theme.effects.animateBackground} onChange={(animateBackground) => fx({ animateBackground })} />
-        <Toggle label="Parallax" description="The background stays behind while your content scrolls over it." checked={theme.effects.parallax} onChange={(parallax) => fx({ parallax })} />
+        <Toggle label="Parallax" description="The background scrolls slower than your content, for a sense of depth." checked={theme.effects.parallax} onChange={(parallax) => fx({ parallax })} />
       </Section>
 
       <Section title="Typography & layout">
@@ -145,7 +145,22 @@ export function DesignPanel({
 
       <Section title="Effects & motion">
         <SelectControl label="Entrance animation" value={theme.effects.entrance} options={ENTRANCES.map((e) => ({ value: e, label: e === "none" ? "None" : cap(e) }))} onChange={(entrance) => fx({ entrance })} />
-        <SelectControl label="Hover effect" value={theme.effects.hover} options={HOVERS.map((h) => ({ value: h, label: h === "none" ? "None" : cap(h) }))} onChange={(hover) => fx({ hover })} />
+        <fieldset className="min-w-0">
+          <legend className="mb-2 text-[0.8rem] font-medium text-dim">Card hover effect</legend>
+          <div className="grid grid-cols-3 gap-1.5">
+            {CARD_EFFECTS.map((c) => (
+              <button
+                key={c} type="button" aria-pressed={theme.effects.card === c} onClick={() => fx({ card: c })}
+                title={CARD_EFFECT_LABELS[c].hint}
+                className={`min-w-0 truncate rounded-lg border px-1 py-2 text-[0.75rem] ${theme.effects.card === c ? "border-volt bg-volt/10 text-fg" : "border-line text-dim hover:text-fg"}`}
+              >
+                {CARD_EFFECT_LABELS[c].label}
+              </button>
+            ))}
+          </div>
+          <p className="field-hint mt-2">{CARD_EFFECT_LABELS[theme.effects.card].hint} Hover the cards in the preview to try it.</p>
+        </fieldset>
+        <SelectControl label="Button hover" value={theme.effects.hover} options={HOVERS.map((h) => ({ value: h, label: h === "none" ? "None" : cap(h) }))} onChange={(hover) => fx({ hover })} />
         <SelectControl label="Overlay" value={theme.effects.overlay} options={OVERLAYS.map((o) => ({ value: o, label: o === "none" ? "None" : cap(o) }))} onChange={(overlay) => fx({ overlay })} />
         <Toggle label="3D tilt" description="The page leans gently towards the visitor's cursor. Best with the glass panel layout." checked={theme.effects.tilt} onChange={(tilt) => fx({ tilt })} />
         <Toggle label="Resonance pulse" description="Soft rings around your avatar and moving wave dividers." checked={theme.effects.resonance} onChange={(resonance) => fx({ resonance })} />

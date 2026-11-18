@@ -42,7 +42,7 @@ export function TemplateCard({
         <h3 className="min-w-0 truncate font-medium">{base.name}</h3>
         <span className="shrink-0 text-xs text-faint">{current.colourway}</span>
       </div>
-      <div role="group" aria-label={`${base.name} colourways`} className="mt-2 flex flex-wrap gap-1.5">
+      <div role="group" aria-label={`${base.name} colourways`} className="mt-2 flex flex-wrap gap-1.5 pl-1">
         {variants.map((v) => {
           const checked = v.id === current.id;
           return (

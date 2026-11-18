@@ -22,6 +22,8 @@ export default function Privacy() {
         <ul>
           <li><strong>Email address</strong> — used to sign in and, where email is configured, for password resets. It is never shown on public pages or next to comments.</li>
           <li><strong>Display name</strong> — shown beside comments you post.</li>
+          <li><strong>Account profile</strong> (optional) — an avatar, a short bio and social links you add in Settings. It stays private unless you copy it into a page, start new pages with it, or turn on “Show my avatar next to my comments”, which shows your avatar publicly beside your comments.</li>
+          <li><strong>Preferences</strong> — your defaults for new pages and the comment-avatar choice above.</li>
           <li><strong>Password</strong> — stored only as an Argon2id hash. Accounts created with Google have no password until you set one. Where email-and-password accounts are switched off, no password is collected at all.</li>
           <li><strong>Google sign-in</strong> (if you use it) — Google's stable account id for you and the email it reported, so we can recognise you next time. We request only your name, email and basic profile, and we don't keep Google access tokens.</li>
           <li><strong>Sessions</strong> — a hashed session token, creation and last-active times, and a coarse device label such as “Firefox on Windows” so you can recognise sessions in Settings. Raw browser strings and IP addresses are not stored.</li>
@@ -36,13 +38,14 @@ export default function Privacy() {
           <li>No IP address, browser string, device identifier or precise time is stored with these counts.</li>
           <li>Network addresses are used briefly to rate-limit abuse; only a keyed one-way digest is written to the database, and the daily clean-up deletes it once it is more than a day old.</li>
           <li>Embedded videos and music don't contact YouTube, Vimeo, Spotify or SoundCloud until you press play.</li>
+          <li>If a creator plays music from a pasted link, your browser loads that file from the site it's hosted on once you click to enter with sound, and that site sees your request like any other. Uploaded songs come from Resonant itself.</li>
           <li>If a page owner adds a Custom code section, it can load images, fonts and scripts from other services (for example a public CDN), which then see your browser's request. Custom code can't read Resonant cookies or send data to its own servers.</li>
         </ul>
 
         <h2>Comments</h2>
         <ul>
           <li>Comments are off unless the page owner turns them on, and only signed-in users can post.</li>
-          <li>A comment stores its text, your account, the page and the time. Publicly it shows only your display name.</li>
+          <li>A comment stores its text, your account, the page and the time. Publicly it shows only your display name, plus your avatar if you've turned that on in Settings.</li>
           <li>Page owners can hide or delete comments on their page. You can delete your own comments at any time.</li>
           <li>Reports store which comment, who reported it and a reason category, and are visible to the page owner.</li>
         </ul>

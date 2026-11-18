@@ -32,6 +32,8 @@ export interface SessionUser {
   id: string;
   email: string;
   displayName: string;
+  /** Account avatar (media id), if set. */
+  avatarId: string | null;
 }
 
 export interface SessionInfo {

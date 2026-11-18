@@ -54,9 +54,9 @@ export async function loadSession(context: Ctx, request: Request): Promise<Sessi
   const id = await sha256Hex(token);
   const sql = db(context);
   const [row] = await sql<
-    { csrf_token: string; last_seen_at: Date; user_id: string; email: string; display_name: string }[]
+    { csrf_token: string; last_seen_at: Date; user_id: string; email: string; display_name: string; avatar_media_id: string | null }[]
   >`
-    SELECT s.csrf_token, s.last_seen_at, u.id AS user_id, u.email, u.display_name
+    SELECT s.csrf_token, s.last_seen_at, u.id AS user_id, u.email, u.display_name, u.avatar_media_id
     FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.id = ${id}
       AND s.expires_at > now()
@@ -75,7 +75,7 @@ export async function loadSession(context: Ctx, request: Request): Promise<Sessi
   return {
     id,
     csrfToken: row.csrf_token,
-    user: { id: row.user_id, email: row.email, displayName: row.display_name },
+    user: { id: row.user_id, email: row.email, displayName: row.display_name, avatarId: row.avatar_media_id },
   };
 }
 

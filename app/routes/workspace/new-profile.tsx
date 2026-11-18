@@ -11,13 +11,16 @@ import { getTemplate, instantiateTemplate, TEMPLATE_BASES, TEMPLATE_COUNT } from
 import { TemplateCard } from "~/components/profile/TemplateCard";
 import { blankDocument } from "~/lib/blocks";
 import { handleProblem, normalizeHandle } from "~/lib/handles";
+import { prefillDocument } from "~/lib/account";
+import { getAccount } from "~/server/account.server";
 
 export const meta: Route.MetaFunction = () => privateMeta("New page");
 
 export async function loader({ context, request }: Route.LoaderArgs) {
   const { user } = requireUser(context, request);
   if ((await countProfiles(context, user.id)) >= MAX_PROFILES_PER_USER) throw redirect("/dashboard");
-  return { origin: new URL(request.url).origin, displayName: user.displayName };
+  const { preferences } = await getAccount(context, user.id);
+  return { origin: new URL(request.url).origin, displayName: user.displayName, preferences };
 }
 
 export async function action({ context, request }: Route.ActionArgs) {
@@ -39,8 +42,11 @@ export async function action({ context, request }: Route.ActionArgs) {
   if (!handle.ok) return data({ formError: null, handleError: handle.error, values }, { status: 400 });
 
   const template = getTemplate(templateId);
-  const doc = template ? instantiateTemplate(template, user.displayName) : blankDocument(user.displayName);
-  const id = await createProfile(context, user.id, handle.handle, doc);
+  const account = await getAccount(context, user.id);
+  const base = template ? instantiateTemplate(template, user.displayName) : blankDocument(user.displayName);
+  // Settings → Preferences: start from the account profile and the comments default.
+  const doc = account.preferences.prefillPages ? prefillDocument(base, account.profile) : base;
+  const id = await createProfile(context, user.id, handle.handle, doc, account.preferences.newPageComments);
   if (!id) return data({ formError: null, handleError: "That handle was just taken. Try another.", values }, { status: 409 });
   throw redirect(`/editor/${id}`);
 }
@@ -108,9 +114,16 @@ export default function NewProfile({ loaderData, actionData }: Route.ComponentPr
               );
             })}
           </ul>
-          <p className="field-hint mt-4">Your display name replaces the sample name. Other sample text stays until you edit it.</p>
+          <p className="field-hint mt-4">Sample text stays until you edit it.</p>
         </fieldset>
 
+        <p className="max-w-xl text-sm text-dim">
+          {loaderData.preferences.prefillPages
+            ? "Your name, avatar, bio and social links from Settings fill the intro and social links. "
+            : "Your display name replaces the sample name; your avatar, bio and links aren't added. "}
+          Comments start {loaderData.preferences.newPageComments ? "on" : "off"}.{" "}
+          <Link to="/settings#preferences" className="underline underline-offset-4 hover:text-fg">Change defaults</Link>
+        </p>
         <div className="flex gap-3">
           <button type="submit" className="btn btn-volt" disabled={busy || !handle}>
             {busy ? "Creating…" : "Create page and open editor"}

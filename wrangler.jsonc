@@ -57,7 +57,7 @@
     "production": {
       "name": "resonant",
       "vars": { "APP_ENV": "production", "PASSWORD_AUTH": "off", "TURNSTILE_SITE_KEY": "", "MAIL_FROM": "" },
-      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "REPLACE_WITH_PRODUCTION_HYPERDRIVE_ID" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "ece192a5f0c3452c8c7e90fdfbd59a59" }],
       "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "resonant-media" }],
       "triggers": { "crons": ["17 3 * * *"] }
     }

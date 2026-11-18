@@ -4,10 +4,11 @@
 // registered blocks can be stored or rendered. Zod-free metadata, defaults and
 // the version upgrader live in ./block-registry.
 import { z } from "zod";
-import { isSafeLink, parseAudioUrl, parseVideoUrl } from "./urls";
+import { isSafeAudioUrl, isSafeLink, parseAudioUrl, parseVideoUrl } from "./urls";
 import {
   ACCENT_IDS,
   BUTTON_STYLES,
+  CARD_EFFECTS,
   ENTRANCES,
   FONT_IDS,
   HOVERS,
@@ -19,7 +20,7 @@ import {
   type ThemeSettings,
 } from "./themes";
 import { BACKDROP_IDS } from "./backdrops";
-import { BLOCK_REGISTRY, DOCUMENT_VERSION, MAX_BLOCKS } from "./block-registry";
+import { BLOCK_REGISTRY, DOCUMENT_VERSION, MAX_BLOCKS, MAX_PAGES, PAGE_SLUG_PATTERN } from "./block-registry";
 export * from "./block-registry";
 
 const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/;
@@ -286,8 +287,30 @@ export const themeSchema = z.strictObject({
     resonance: z.boolean(),
     animateBackground: z.boolean(),
     tilt: z.boolean(),
+    card: z.enum(CARD_EFFECTS),
   }),
 }) satisfies z.ZodType<ThemeSettings>;
+
+const pageSchema = z.strictObject({
+  id: blockId,
+  slug: z.string().regex(PAGE_SLUG_PATTERN, "Page addresses use lowercase letters, numbers and dashes (up to 32)"),
+  title: required(40, "Page name"),
+  blocks: z.array(blockSchema).max(MAX_BLOCKS, `A page can hold up to ${MAX_BLOCKS} blocks`),
+});
+
+export const navSchema = z.strictObject({
+  mode: z.enum(["tabs", "stack"]),
+  homeLabel: required(40, "Home page name"),
+});
+
+export const musicSchema = z.strictObject({
+  source: z.enum(["none", "upload", "url"]),
+  media: mediaRef,
+  url: z.string().refine((v) => v === "" || isSafeAudioUrl(v), "Song link must be a full https:// address of an audio file"),
+  title: line(80, "Song title"),
+  enterText: line(60, "Enter-screen text"),
+  volume: z.number().int().min(0).max(100),
+});
 
 export const documentSchema = z
   .strictObject({
@@ -295,13 +318,34 @@ export const documentSchema = z
     theme: themeSchema,
     seo: z.strictObject({ title: line(70, "Page title"), description: line(160, "Page description") }),
     blocks: z.array(blockSchema).max(MAX_BLOCKS, `A page can hold up to ${MAX_BLOCKS} blocks`),
+    pages: z.array(pageSchema).max(MAX_PAGES, `A site can have up to ${MAX_PAGES} extra pages`),
+    nav: navSchema,
+    music: musicSchema,
   })
   .superRefine((doc, ctx) => {
+    // Block (and page) ids are unique across the whole site.
     const seen = new Set<string>();
     doc.blocks.forEach((b, i) => {
       if (seen.has(b.id)) ctx.addIssue({ code: "custom", path: ["blocks", i, "id"], message: "Duplicate block id" });
       seen.add(b.id);
     });
+    const slugs = new Set<string>();
+    doc.pages.forEach((p, pi) => {
+      if (seen.has(p.id)) ctx.addIssue({ code: "custom", path: ["pages", pi, "id"], message: "Duplicate page id" });
+      seen.add(p.id);
+      if (slugs.has(p.slug)) ctx.addIssue({ code: "custom", path: ["pages", pi, "slug"], message: `Two pages use the address "${p.slug}"` });
+      slugs.add(p.slug);
+      p.blocks.forEach((b, i) => {
+        if (seen.has(b.id)) ctx.addIssue({ code: "custom", path: ["pages", pi, "blocks", i, "id"], message: "Duplicate block id" });
+        seen.add(b.id);
+      });
+    });
+    if (doc.music.source === "upload" && !doc.music.media) {
+      ctx.addIssue({ code: "custom", path: ["music", "media"], message: "Upload a song or turn music off" });
+    }
+    if (doc.music.source === "url" && !doc.music.url) {
+      ctx.addIssue({ code: "custom", path: ["music", "url"], message: "Paste a song link or turn music off" });
+    }
     if (doc.theme.background.kind === "image" && !doc.theme.background.media) {
       ctx.addIssue({ code: "custom", path: ["theme", "background", "media"], message: "Upload a background image or choose a built-in background" });
     }
@@ -309,11 +353,16 @@ export const documentSchema = z
 
 export type ProfileDocument = z.infer<typeof documentSchema>;
 
-/** Media ids referenced by a document (for ownership checks on save). */
+/** Every block on every page of the site. */
+export function allBlocks(doc: ProfileDocument): Block[] {
+  return [...doc.blocks, ...doc.pages.flatMap((p) => p.blocks)];
+}
+
+/** Image media ids referenced by a document (for ownership and type checks on save). */
 export function referencedMedia(doc: ProfileDocument): string[] {
   const ids = new Set<string>();
   if (doc.theme.background.media) ids.add(doc.theme.background.media);
-  for (const b of doc.blocks) {
+  for (const b of allBlocks(doc)) {
     if (b.type === "intro" && b.avatar) ids.add(b.avatar);
     if ((b.type === "image" || b.type === "cover") && b.media) ids.add(b.media);
     if (b.type === "gallery") b.items.forEach((i) => ids.add(i.media));
@@ -322,14 +371,28 @@ export function referencedMedia(doc: ProfileDocument): string[] {
   return [...ids];
 }
 
+/** Audio media id referenced by a document's music player, if any. */
+export function referencedAudio(doc: ProfileDocument): string | null {
+  return doc.music.source === "upload" ? doc.music.media : null;
+}
+
+type IssueDoc = { blocks?: { type?: string }[]; pages?: { title?: string; blocks?: { type?: string }[] }[] };
+
 /** Flatten zod issues to "Block #n: message" strings suitable for display. */
-export function describeIssues(error: z.ZodError, doc?: { blocks?: { type?: string }[] }): string[] {
+export function describeIssues(error: z.ZodError, doc?: IssueDoc): string[] {
+  const label = (type: string | undefined) => (type && type in BLOCK_REGISTRY ? BLOCK_REGISTRY[type as BlockType].label : "Block");
   return error.issues.slice(0, 12).map((issue) => {
-    const [root, index] = issue.path;
+    const [root, index, sub, subIndex] = issue.path;
     if (root === "blocks" && typeof index === "number") {
-      const type = doc?.blocks?.[index]?.type;
-      const label = type && type in BLOCK_REGISTRY ? BLOCK_REGISTRY[type as BlockType].label : "Block";
-      return `${label} #${index + 1}: ${issue.message}`;
+      return `${label(doc?.blocks?.[index]?.type)} #${index + 1}: ${issue.message}`;
+    }
+    if (root === "pages" && typeof index === "number") {
+      const page = doc?.pages?.[index];
+      const name = page?.title?.trim() ? `"${page.title.trim()}" page` : `Page ${index + 2}`;
+      if (sub === "blocks" && typeof subIndex === "number") {
+        return `${name}, ${label(page?.blocks?.[subIndex]?.type)} #${subIndex + 1}: ${issue.message}`;
+      }
+      return `${name}: ${issue.message}`;
     }
     return issue.message;
   });

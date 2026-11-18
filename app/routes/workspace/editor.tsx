@@ -15,9 +15,10 @@ import { Layers } from "~/components/editor/BlockList";
 import { Library } from "~/components/editor/Library";
 import { Canvas } from "~/components/editor/Canvas";
 import { DesignPanel } from "~/components/editor/DesignPanel";
-import { BlockForm, blockErrors, type MediaContext } from "~/components/editor/BlockForms";
+import { AccountProfileContext, BlockForm, blockErrors, type MediaContext } from "~/components/editor/BlockForms";
 import { historyReducer, initHistory, insertBlock, moveBlock, removeBlock, updateBlock } from "~/components/editor/state";
 import { IconButton, Icons, TextControl, Toggle } from "~/components/editor/controls";
+import { MusicSection, PageStrip, PagesSection, newPage } from "~/components/editor/SitePanel";
 import type { MediaItem } from "~/components/editor/MediaPicker";
 import { CsrfInput, useCsrfToken } from "~/components/ui/forms";
 import { CopyButton } from "~/components/ui/CopyButton";
@@ -30,6 +31,7 @@ import { deleteComment, isUuid, listCommentsForOwner, setCommentStatus } from "~
 import { checkRateLimit, tooManyRequests } from "~/server/rate-limit.server";
 import { db } from "~/server/db.server";
 import { formString } from "~/server/request.server";
+import { getAccount } from "~/server/account.server";
 
 export const meta: Route.MetaFunction = ({ loaderData }) =>
   privateMeta(loaderData ? `Editing @${loaderData.profile.handle}` : "Editor");
@@ -37,11 +39,14 @@ export const meta: Route.MetaFunction = ({ loaderData }) =>
 export async function loader({ context, request, params }: Route.LoaderArgs) {
   const { user } = requireUser(context, request);
   const profile = await getOwnedProfile(context, user.id, params.profileId);
-  const media = await db(context)<{ id: string }[]>`
-    SELECT id FROM media WHERE owner_id = ${user.id} ORDER BY created_at DESC LIMIT 60`;
+  const media = await db(context)<{ id: string; content_type: string }[]>`
+    SELECT id, content_type FROM media WHERE owner_id = ${user.id} ORDER BY created_at DESC LIMIT 80`;
   const comments = await listCommentsForOwner(context, profile.id);
+  const account = await getAccount(context, user.id);
   return {
     origin: new URL(request.url).origin,
+    // Settings → Profile; offered as "Use my account profile" in the intro and social forms.
+    account: account.profile,
     profile: {
       id: profile.id,
       handle: profile.handle,
@@ -54,7 +59,7 @@ export async function loader({ context, request, params }: Route.LoaderArgs) {
       commentsEnabled: profile.comments_enabled,
       indexable: profile.indexable,
     },
-    media: media.map((m) => ({ id: m.id })),
+    media: media.map((m) => ({ id: m.id, kind: m.content_type.startsWith("audio/") ? ("audio" as const) : ("image" as const) })),
     comments: comments.map((c) => ({
       id: c.id, body: c.body, author: c.author_name, createdAt: c.created_at.toISOString(), status: c.status, reports: c.reports,
     })),
@@ -174,6 +179,8 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
   const [device, setDevice] = useState<Device>("mobile");
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const [library, setLibrary] = useState<MediaItem[]>(loaderData.media);
+  // Which page of the site is being edited (null = home).
+  const [pageId, setPageId] = useState<string | null>(null);
   const isWide = useMediaQuery("(min-width: 1280px)");
 
   // Preview defaults to the kind of device you're editing on.
@@ -254,29 +261,49 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
 
   // --- Editing operations ---------------------------------------------------------
   const change = useCallback((next: ProfileDocument, key?: string) => dispatch({ type: "change", doc: next, key }), []);
-  const selectedIndex = doc.blocks.findIndex((b) => b.id === selectedId);
-  const selected = selectedIndex >= 0 ? doc.blocks[selectedIndex] : null;
+
+  // Block operations work on a "view" of the page being edited: the document with
+  // that page's blocks in doc.blocks. changeView writes them back to the right page.
+  const activePage = pageId ? doc.pages.find((p) => p.id === pageId) ?? null : null;
+  useEffect(() => {
+    if (pageId && !activePage) setPageId(null); // page deleted (or undone away)
+  }, [pageId, activePage]);
+  const view: ProfileDocument = useMemo(() => (activePage ? { ...doc, blocks: activePage.blocks } : doc), [doc, activePage]);
+  const changeView = (next: ProfileDocument, key?: string) =>
+    change(activePage ? { ...doc, pages: doc.pages.map((p) => (p.id === activePage.id ? { ...p, blocks: next.blocks } : p)) } : next, key);
+  const selectPage = (id: string | null) => {
+    setPageId(id);
+    setSelectedId(null);
+  };
+  const addPage = () => {
+    const page = newPage(doc);
+    change({ ...doc, pages: [...doc.pages, page] }, "pages.add");
+    selectPage(page.id);
+  };
+
+  const selectedIndex = view.blocks.findIndex((b) => b.id === selectedId);
+  const selected = selectedIndex >= 0 ? view.blocks[selectedIndex] : null;
 
   const insertPreset = (preset: ComponentPreset, index?: number) => {
     const block = preset.create();
-    const at = index ?? (selectedIndex >= 0 ? selectedIndex + 1 : doc.blocks.length);
-    change(insertBlock(doc, block, at));
+    const at = index ?? (selectedIndex >= 0 ? selectedIndex + 1 : view.blocks.length);
+    changeView(insertBlock(view, block, at));
     setSelectedId(block.id);
     if (!isWide) setTab("layers");
   };
-  const onBlockChange = (id: string, patch: Partial<Block>, key: string) => change(updateBlock(doc, id, patch), key);
+  const onBlockChange = (id: string, patch: Partial<Block>, key: string) => changeView(updateBlock(view, id, patch), key);
   const onDuplicate = (id: string) => {
-    const index = doc.blocks.findIndex((b) => b.id === id);
+    const index = view.blocks.findIndex((b) => b.id === id);
     if (index < 0) return;
-    const copy = { ...structuredClone(doc.blocks[index]), id: newBlockId() } as Block;
-    change(insertBlock(doc, copy, index + 1));
+    const copy = { ...structuredClone(view.blocks[index]), id: newBlockId() } as Block;
+    changeView(insertBlock(view, copy, index + 1));
     setSelectedId(copy.id);
   };
   const onRemove = (id: string) => {
-    change(removeBlock(doc, id));
+    changeView(removeBlock(view, id));
     setSelectedId(null);
   };
-  const onMove = (from: number, to: number) => change(moveBlock(doc, from, to));
+  const onMove = (from: number, to: number) => changeView(moveBlock(view, from, to));
   const onTheme = (patch: Partial<ThemeSettings>, key: string) => change({ ...doc, theme: { ...doc.theme, ...patch } }, `theme.${key}`);
 
   // Keyboard: undo/redo/save, Delete removes the selected block when focus isn't in a field.
@@ -303,15 +330,15 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
   const [dragLabel, setDragLabel] = useState<string | null>(null);
   const indexOfDropTarget = (overId: string | null) => {
     if (!overId) return -1;
-    if (overId === "canvas-end" || overId === "layers-end") return doc.blocks.length;
+    if (overId === "canvas-end" || overId === "layers-end") return view.blocks.length;
     const id = overId.slice(2);
-    return doc.blocks.findIndex((b) => b.id === id);
+    return view.blocks.findIndex((b) => b.id === id);
   };
   function onDragStart(e: DragStartEvent) {
     const id = String(e.active.id);
     if (id.startsWith("lib:")) setDragLabel(findComponent(id.slice(4))?.label ?? "Component");
     else {
-      const b = doc.blocks.find((x) => x.id === id.slice(2));
+      const b = view.blocks.find((x) => x.id === id.slice(2));
       setDragLabel(b ? BLOCK_REGISTRY[b.type].label : null);
     }
   }
@@ -326,8 +353,8 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
       if (preset) insertPreset(preset, to);
       return;
     }
-    const from = doc.blocks.findIndex((b) => b.id === activeId.slice(2));
-    if (from >= 0 && from !== to) onMove(from, Math.min(to, doc.blocks.length - 1));
+    const from = view.blocks.findIndex((b) => b.id === activeId.slice(2));
+    if (from >= 0 && from !== to) onMove(from, Math.min(to, view.blocks.length - 1));
   }
 
   // --- Other actions (publish, settings, moderation) ---------------------------------
@@ -338,8 +365,10 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
 
   const canPublish = status === "saved" && !dirty && validation.success;
   const liveUrl = origin + profilePath(profile.handle);
-  const media: MediaContext = { library, csrf, onUploaded: (item) => setLibrary((l) => [item, ...l.filter((x) => x.id !== item.id)]) };
-  const full = doc.blocks.length >= 80;
+  const onUploaded = (item: MediaItem) => setLibrary((l) => [item, ...l.filter((x) => x.id !== item.id)]);
+  const media: MediaContext = { library: library.filter((m) => m.kind !== "audio"), csrf, onUploaded };
+  const audioLibrary = library.filter((m) => m.kind === "audio");
+  const full = view.blocks.length >= 80;
 
   const inspector = selected ? (
     <Inspector
@@ -354,13 +383,25 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
 
   const leftPanel: Record<LeftTab, ReactNode> = {
     add: <Library onInsert={(p) => insertPreset(p)} disabled={full} theme={doc.theme} />,
-    layers: !isWide && inspector ? inspector : <Layers blocks={doc.blocks} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); }} onMove={onMove} />,
+    layers: !isWide && inspector ? inspector : <Layers blocks={view.blocks} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); }} onMove={onMove} />,
     design: <DesignPanel theme={doc.theme} media={media} onChange={onTheme} />,
     page: (
       <PagePanel
         profile={profile} liveUrl={liveUrl} origin={origin} doc={doc}
         onSeo={(seo, key) => change({ ...doc, seo: { ...doc.seo, ...seo } }, key)}
         submitAction={submitAction} busyIntent={typeof busyIntent === "string" ? busyIntent : null}
+        site={
+          <>
+            <PagesSection doc={doc} liveUrl={liveUrl} onChange={(patch, key) => change({ ...doc, ...patch }, key)} onSelectPage={selectPage} />
+            <MusicSection
+              music={doc.music}
+              onChange={(patch, key) => change({ ...doc, music: { ...doc.music, ...patch } }, key)}
+              audioLibrary={audioLibrary}
+              csrf={csrf}
+              onUploaded={onUploaded}
+            />
+          </>
+        }
       />
     ),
     comments: <CommentsPanel comments={loaderData.comments} enabled={profile.commentsEnabled} submitAction={submitAction} />,
@@ -372,6 +413,7 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
   }, [selectedId, isWide]);
 
   return (
+    <AccountProfileContext.Provider value={loaderData.account}>
     <div className="flex h-dvh flex-col bg-ink">
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line px-3 sm:gap-3 sm:px-4">
         <Link to="/dashboard" className="flex shrink-0 items-center gap-2 rounded-lg pr-1 text-sm text-dim hover:text-fg" aria-label="Back to dashboard">
@@ -443,7 +485,7 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
               ))}
             </div>
             <div id="editor-tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
-              <SortableContext items={doc.blocks.map((b) => `l:${b.id}`)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={view.blocks.map((b) => `l:${b.id}`)} strategy={verticalListSortingStrategy}>
                 {leftPanel[tab]}
               </SortableContext>
             </div>
@@ -451,8 +493,9 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
 
           {/* Centre: live canvas */}
           <section aria-label="Page canvas" className={`${mobileView === "preview" ? "flex" : "hidden"} min-w-0 flex-1 flex-col bg-ink-2 lg:flex`}>
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-4 py-2">
-              <p className="truncate text-xs text-faint">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-2">
+              <PageStrip doc={doc} pageId={pageId} onSelect={selectPage} onAdd={addPage} />
+              <p className="hidden shrink truncate text-xs text-faint xl:block">
                 Draft preview{dirty ? " · unsaved changes" : ""} · click a block to edit, drag to reorder
               </p>
               <div role="group" aria-label="Preview device" className="flex gap-1 lg:hidden">
@@ -469,14 +512,14 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
                 <div className="mx-auto w-full max-w-[24.5rem]">
                   <PhoneFrame>
                     <div className="h-[min(48rem,calc(100dvh-12rem))] overflow-y-auto">
-                      <Canvas doc={doc} selectedId={selectedId} onSelect={setSelectedId} onMove={onMove} onDuplicate={onDuplicate} onRemove={onRemove} />
+                      <Canvas doc={view} pageId={pageId} onNavigate={selectPage} selectedId={selectedId} onSelect={setSelectedId} onMove={onMove} onDuplicate={onDuplicate} onRemove={onRemove} />
                     </div>
                   </PhoneFrame>
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-2xl border border-line-strong">
                   <div className="h-[calc(100dvh-10rem)] min-h-[28rem] overflow-y-auto">
-                    <Canvas doc={doc} selectedId={selectedId} onSelect={setSelectedId} onMove={onMove} onDuplicate={onDuplicate} onRemove={onRemove} />
+                    <Canvas doc={view} pageId={pageId} onNavigate={selectPage} selectedId={selectedId} onSelect={setSelectedId} onMove={onMove} onDuplicate={onDuplicate} onRemove={onRemove} />
                   </div>
                 </div>
               )}
@@ -505,6 +548,7 @@ export default function Editor({ loaderData }: Route.ComponentProps) {
         </DragOverlay>
       </DndContext>
     </div>
+    </AccountProfileContext.Provider>
   );
 }
 
@@ -581,11 +625,13 @@ function Notices({ status, clientErrors, serverErrors, actionResult }: { status:
 type LoaderProfile = Route.ComponentProps["loaderData"]["profile"];
 
 function PagePanel({
-  profile, liveUrl, origin, doc, onSeo, submitAction, busyIntent,
+  profile, liveUrl, origin, doc, onSeo, submitAction, busyIntent, site,
 }: {
   profile: LoaderProfile; liveUrl: string; origin: string; doc: ProfileDocument;
   onSeo: (seo: Partial<ProfileDocument["seo"]>, key: string) => void;
   submitAction: (fields: Record<string, string>) => void; busyIntent: string | null;
+  /** Pages and music settings. */
+  site: ReactNode;
 }) {
   const [handle, setHandle] = useState(profile.handle);
   const [confirm, setConfirm] = useState("");
@@ -610,6 +656,8 @@ function PagePanel({
           <button type="submit" className="btn btn-ghost btn-sm justify-self-start" disabled={handle === profile.handle || busyIntent === "settings"}>Change handle</button>
         </form>
       </section>
+
+      {site}
 
       <section className="grid min-w-0 gap-4">
         <h2 className="text-sm font-semibold">Visibility</h2>

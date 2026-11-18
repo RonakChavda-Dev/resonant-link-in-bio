@@ -1,10 +1,14 @@
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { blockSchemas, type Block, type BlockOf } from "~/lib/blocks";
 import { BACKDROPS, BACKDROP_IDS } from "~/lib/backdrops";
 import { normalizeLink, parseAudioUrl, parseVideoUrl, platformFor } from "~/lib/urls";
 import { IconButton, Icons, Segmented, SelectControl, SliderControl, TextControl } from "./controls";
 import { CodeStudio } from "./CodeStudio";
 import { MediaGrid, MediaPicker, uploadImage, type MediaItem } from "./MediaPicker";
+import { introFromAccount, socialsFromAccount, type AccountProfile } from "~/lib/account";
+
+/** The signed-in creator's account profile (Settings → Profile), provided by the editor route. */
+export const AccountProfileContext = createContext<AccountProfile | null>(null);
 
 export type FieldErrors = Record<string, string>;
 
@@ -155,8 +159,15 @@ function ListEditor<T>({
 }
 
 function IntroForm({ block, onChange, errors, media }: FormProps<"intro">) {
+  const account = useContext(AccountProfileContext);
   return (
     <Stack>
+      {account ? (
+        <FromAccount
+          note={account.avatar || account.bio ? "Fills name, avatar and bio from Settings." : "Fills your display name. Add an avatar and bio in Settings."}
+          onUse={() => onChange(introFromAccount(block, account), "from-account")}
+        />
+      ) : null}
       <MediaPicker label="Avatar" value={block.avatar} onChange={(avatar) => onChange({ avatar }, "avatar")} {...media} />
       <TextControl label="Name" value={block.name} max={60} error={errors.name} onChange={(name) => onChange({ name }, `${block.id}.name`)} />
       <TextControl label="Tagline" value={block.tagline} max={120} error={errors.tagline} onChange={(tagline) => onChange({ tagline }, `${block.id}.tagline`)} />
@@ -166,6 +177,15 @@ function IntroForm({ block, onChange, errors, media }: FormProps<"intro">) {
       <Segmented label="Alignment" value={block.align} options={[{ value: "center", label: "Centre" }, { value: "left", label: "Left" }]} onChange={(align) => onChange({ align }, "align")} />
       <Segmented label="Avatar shape" value={block.avatarShape} options={[{ value: "circle", label: "Circle" }, { value: "rounded", label: "Rounded" }, { value: "square", label: "Square" }, { value: "none", label: "Hidden" }]} onChange={(avatarShape) => onChange({ avatarShape }, "avatarShape")} />
     </Stack>
+  );
+}
+
+function FromAccount({ note, onUse }: { note: string; onUse: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line px-3 py-2.5">
+      <p className="min-w-0 flex-1 text-[0.78rem] text-faint">{note}</p>
+      <button type="button" className="btn btn-ghost btn-sm shrink-0" onClick={onUse}>Use my account profile</button>
+    </div>
   );
 }
 
@@ -246,8 +266,19 @@ function ButtonsForm({ block, onChange, errors }: FormProps<"buttons">) {
 }
 
 function SocialsForm({ block, onChange, errors }: FormProps<"socials">) {
+  const account = useContext(AccountProfileContext);
   return (
     <Stack>
+      {account ? (
+        account.socials.length ? (
+          <FromAccount
+            note={`Replaces these links with the ${account.socials.length} saved in Settings.`}
+            onUse={() => onChange({ items: socialsFromAccount(account) }, "from-account")}
+          />
+        ) : (
+          <p className="field-hint">Save your social links once in <a href="/settings#profile" target="_blank" rel="noopener" className="underline underline-offset-2">Settings</a> to reuse them on every page.</p>
+        )
+      ) : null}
       <Segmented label="Style" value={block.variant} options={[{ value: "icons", label: "Icons" }, { value: "pills", label: "Pills" }, { value: "list", label: "List" }]} onChange={(variant) => onChange({ variant }, "variant")} />
       <ListEditor
         label="Profiles" items={block.items} max={12} itemLabel={(i) => platformFor(block.items[i]?.url ?? "").name}

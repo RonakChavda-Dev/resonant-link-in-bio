@@ -119,6 +119,21 @@
   .alert-ok { border-color: rgb(255 255 255 / 0.2); background: rgb(255 255 255 / 0.05); color: #e4e4e7; }
   .alert-info { border-color: var(--color-line-strong); background: rgb(255 255 255 / 0.03); color: var(--color-dim); }
 
+  /* Native checkbox styled as a switch (still a checkbox to assistive tech). */
+  .switch {
+    appearance: none; flex-shrink: 0; position: relative; cursor: pointer;
+    width: 2.5rem; height: 1.45rem; border-radius: 999px;
+    background: var(--color-ink-2); border: 1px solid var(--color-line-strong);
+    transition: background-color .15s, border-color .15s;
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: calc(1.45rem - 6px); height: calc(1.45rem - 6px);
+    border-radius: 999px; background: var(--color-dim); transition: transform .15s, background-color .15s;
+  }
+  .switch:checked { background: var(--color-fg); border-color: var(--color-fg); }
+  .switch:checked::after { transform: translateX(1.05rem); background: var(--color-ink); }
+  @media (prefers-reduced-motion: reduce) { .switch, .switch::after { transition: none; } }
+
   .prose-plain h2 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.02em; margin-top: 2.5rem; margin-bottom: 0.75rem; }
   .prose-plain h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.4rem; }
   .prose-plain p, .prose-plain li { color: var(--color-dim); line-height: 1.7; }

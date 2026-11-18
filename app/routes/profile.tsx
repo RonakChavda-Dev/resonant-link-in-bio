@@ -1,17 +1,19 @@
-// GET /@handle — the public, single-page profile.
+// GET /@handle (and /@handle/:page) — the public profile and its extra pages.
 // Only the published snapshot is loaded. Missing → 404, unpublished/deleted → 410.
+// Sites in "stack" mode show every page on /@handle; /@handle/:page redirects there.
 import { useEffect } from "react";
-import { data, Form, Link, useNavigation } from "react-router";
+import { data, Form, Link, redirect, useNavigation } from "react-router";
 import type { Route } from "./+types/profile";
 import { HANDLE_PATTERN, normalizeHandle, profilePath } from "~/lib/handles";
 import { profileDescription, profileTitle } from "~/lib/block-registry";
 import { rootOrigin } from "~/lib/seo";
-import { ProfileView } from "~/components/profile/ProfileView";
+import { mediaUrl, ProfileView } from "~/components/profile/ProfileView";
 import { LogoMark } from "~/components/ui/Logo";
 import { CsrfInput } from "~/components/ui/forms";
 import { sessionContext } from "~/server/context";
 import { requireCsrf } from "~/server/session.server";
 import { findPublicProfile } from "~/server/profiles.server";
+import { PAGE_SLUG_PATTERN } from "~/lib/block-registry";
 import { COMMENT_MAX } from "~/lib/limits";
 import {
   createComment,
@@ -43,14 +45,27 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
   if (lookup.kind === "gone") throw data("Gone", { status: 410 });
   if (lookup.kind === "missing") throw data("Not found", { status: 404 });
   const { profile } = lookup;
+  const doc = profile.published;
+
+  // Extra page of the site, if the address names one.
+  let page: { id: string; title: string; slug: string } | null = null;
+  if (params.page !== undefined) {
+    const slug = params.page.toLowerCase();
+    const found = PAGE_SLUG_PATTERN.test(slug) ? doc.pages.find((p) => p.slug === slug) : undefined;
+    if (!found) throw data("Not found", { status: 404 });
+    if (doc.nav.mode === "stack") throw redirect(`${profilePath(profile.handle)}#${found.slug}`, 301);
+    page = { id: found.id, title: found.title, slug: found.slug };
+  }
 
   const session = context.get(sessionContext);
   const comments = profile.comments_enabled ? await listVisibleComments(context, profile.id) : [];
   const url = new URL(request.url);
   return {
     handle: profile.handle,
-    canonicalPath: profilePath(profile.handle),
-    doc: profile.published,
+    basePath: profilePath(profile.handle),
+    canonicalPath: profilePath(profile.handle) + (page ? `/${encodeURIComponent(page.slug)}` : ""),
+    page,
+    doc,
     indexable: profile.indexable,
     commentsEnabled: profile.comments_enabled,
     isOwner: session?.user.id === profile.owner_id,
@@ -60,6 +75,7 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
       id: c.id,
       body: c.body,
       author: c.author_name,
+      avatar: c.author_avatar,
       mine: session?.user.id === c.author_id,
       createdAt: c.created_at.toISOString(),
     })),
@@ -75,7 +91,8 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
 
 export const meta: Route.MetaFunction = ({ loaderData, matches }) => {
   if (!loaderData) return [{ title: "Page not found · Resonant" }, { name: "robots", content: "noindex" }];
-  const title = profileTitle(loaderData.doc, loaderData.handle);
+  const siteTitle = profileTitle(loaderData.doc, loaderData.handle);
+  const title = loaderData.page ? `${loaderData.page.title} · ${siteTitle}` : siteTitle;
   const description = profileDescription(loaderData.doc);
   const url = rootOrigin(matches) + loaderData.canonicalPath;
   return [
@@ -156,7 +173,7 @@ function useAnalyticsBeacon(handle: string, enabled: boolean) {
 }
 
 export default function Profile({ loaderData, actionData }: Route.ComponentProps) {
-  const { doc, handle, isOwner } = loaderData;
+  const { doc, handle, isOwner, page, basePath } = loaderData;
   useAnalyticsBeacon(handle, !isOwner);
   return (
     <>
@@ -171,6 +188,8 @@ export default function Profile({ loaderData, actionData }: Route.ComponentProps
       <ProfileView
         doc={doc}
         mode="public"
+        pageId={page?.id ?? null}
+        basePath={basePath}
         footer={
           <>
             {loaderData.commentsEnabled ? <Comments data={loaderData} actionData={actionData} /> : null}
@@ -225,7 +244,10 @@ function Comments({ data: d, actionData }: { data: Route.ComponentProps["loaderD
           {d.comments.map((c) => (
             <li key={c.id} className="rp-comment">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="text-sm font-medium">{c.author}</span>
+                <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                  {c.avatar ? <img src={mediaUrl(c.avatar)} alt="" width={24} height={24} className="size-6 shrink-0 rounded-full object-cover" loading="lazy" /> : null}
+                  <span className="min-w-0 break-words">{c.author}</span>
+                </span>
                 <time className="text-xs" style={{ color: "var(--rp-muted)" }} dateTime={c.createdAt}>
                   {new Date(c.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
                 </time>

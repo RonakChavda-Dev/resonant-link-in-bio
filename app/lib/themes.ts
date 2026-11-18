@@ -121,6 +121,21 @@ export const ENTRANCES = ["none", "fade", "rise", "scale", "blur", "slide"] as c
 export const HOVERS = ["lift", "glow", "shine", "press", "fill", "none"] as const;
 export const NAME_STYLES = ["plain", "gradient", "shimmer", "outline", "marker", "shadow", "glow"] as const;
 export const OVERLAYS = ["none", "grain", "vignette", "scanlines", "stars", "spotlight"] as const;
+/** Per-card hover effects (links, projects, callouts, stats, media…). See profile.css "Card effects". */
+export const CARD_EFFECTS = ["none", "tilt", "glare", "holo", "depth", "magnetic", "spotlight", "border", "float", "lean", "swing"] as const;
+export const CARD_EFFECT_LABELS: Record<(typeof CARD_EFFECTS)[number], { label: string; hint: string }> = {
+  none: { label: "None", hint: "Cards stay still." },
+  tilt: { label: "3D tilt", hint: "Each card tilts in 3D towards the cursor." },
+  glare: { label: "Tilt + glare", hint: "3D tilt with a light sheen that follows the cursor." },
+  holo: { label: "Holographic", hint: "3D tilt with a shifting rainbow foil." },
+  depth: { label: "Depth", hint: "The card tilts and its contents float forward." },
+  magnetic: { label: "Magnetic", hint: "Cards drift towards the cursor." },
+  spotlight: { label: "Spotlight", hint: "A soft light follows the cursor across the card." },
+  border: { label: "Glow border", hint: "The card's edge lights up near the cursor." },
+  float: { label: "Float", hint: "Cards rise with a soft shadow on hover." },
+  lean: { label: "Lean back", hint: "Cards tip back in 3D on hover." },
+  swing: { label: "Swing", hint: "Cards swing slightly, like hanging from a pin." },
+};
 
 export interface BackgroundSettings {
   kind: "preset" | "image";
@@ -148,6 +163,8 @@ export interface EffectSettings {
   animateBackground: boolean;
   /** The page panel tilts in 3D towards the visitor's pointer. */
   tilt: boolean;
+  /** Hover effect applied to each card on the page. */
+  card: (typeof CARD_EFFECTS)[number];
 }
 
 export interface ThemeSettings {
@@ -171,6 +188,7 @@ export const DEFAULT_EFFECTS: EffectSettings = {
   resonance: true,
   animateBackground: true,
   tilt: false,
+  card: "none",
 };
 
 export const DEFAULT_THEME: ThemeSettings = {

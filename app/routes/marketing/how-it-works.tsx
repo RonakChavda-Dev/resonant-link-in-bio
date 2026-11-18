@@ -37,7 +37,8 @@ const STEPS = [
     body: (
       <>
         The editor opens with your blocks on the left. Use <strong>Add block</strong> to insert links, text, images,
-        a gallery, a video, an FAQ, a callout, headings or dividers. Drag the handle to reorder, or focus a block and
+        a gallery, a video, an FAQ, a callout, headings or dividers. Use <strong>+ Page</strong> above the preview to add more
+        pages, and switch between them there. Drag the handle to reorder, or focus a block and
         use the <strong>Move up</strong> / <strong>Move down</strong> buttons. Select a block to edit its fields. The{" "}
         <strong>Design</strong> tab changes palette, accent, type, corners, buttons, backdrop and the resonance pulse.
       </>

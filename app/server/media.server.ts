@@ -1,7 +1,9 @@
 // Upload validation by file signature ("magic bytes"), never by name or the
-// client-declared type alone. Only inert raster formats are accepted.
+// client-declared type alone. Only inert raster images and common audio
+// formats are accepted.
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+export const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 export const MAX_MEDIA_PER_USER = 200;
 
 export type ImageType = "image/png" | "image/jpeg" | "image/webp" | "image/gif";
@@ -15,5 +17,20 @@ export function sniffImageType(bytes: Uint8Array): ImageType | null {
     return "image/webp";
   if (b.length >= 6 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38 && (b[4] === 0x37 || b[4] === 0x39) && b[5] === 0x61)
     return "image/gif";
+  return null;
+}
+
+export type AudioType = "audio/mpeg" | "audio/mp4" | "audio/ogg" | "audio/wav";
+
+export function sniffAudioType(bytes: Uint8Array): AudioType | null {
+  const b = bytes;
+  const ascii = (at: number, s: string) => b.length >= at + s.length && [...s].every((c, i) => b[at + i] === c.charCodeAt(0));
+  // MP3: an ID3v2 tag, or an MPEG audio frame sync (11 set bits) with a valid layer.
+  if (ascii(0, "ID3")) return "audio/mpeg";
+  if (b.length >= 2 && b[0] === 0xff && (b[1] & 0xe0) === 0xe0 && (b[1] & 0x06) !== 0) return "audio/mpeg";
+  // M4A/AAC in an MP4 container: "ftyp" box with an audio brand.
+  if (ascii(4, "ftyp") && ["M4A ", "M4B ", "mp42", "isom", "dash"].some((brand) => ascii(8, brand))) return "audio/mp4";
+  if (ascii(0, "OggS")) return "audio/ogg";
+  if (ascii(0, "RIFF") && ascii(8, "WAVE")) return "audio/wav";
   return null;
 }

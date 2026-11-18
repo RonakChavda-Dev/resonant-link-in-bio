@@ -1,5 +1,5 @@
 // Comments: signed-in authors only, owner moderation, author deletion, reports.
-// Public listings select the author's display name only — never email.
+// Public listings select the author's display name (and avatar, if they opted in) — never email.
 import type { RouterContextProvider } from "react-router";
 import { db } from "./db.server";
 
@@ -14,11 +14,14 @@ export interface PublicComment {
   created_at: Date;
   author_id: string;
   author_name: string;
+  /** Only set when the author turned on "Show my avatar next to my comments". */
+  author_avatar: string | null;
 }
 
 export async function listVisibleComments(context: Ctx, profileId: string, limit = 50): Promise<PublicComment[]> {
   return db(context)<PublicComment[]>`
-    SELECT c.id, c.body, c.created_at, c.author_id, u.display_name AS author_name
+    SELECT c.id, c.body, c.created_at, c.author_id, u.display_name AS author_name,
+           CASE WHEN u.pref_comment_avatar THEN u.avatar_media_id END AS author_avatar
     FROM comments c JOIN users u ON u.id = c.author_id
     WHERE c.profile_id = ${profileId} AND c.status = 'visible'
     ORDER BY c.created_at DESC
@@ -33,7 +36,8 @@ export interface ModerationComment extends PublicComment {
 /** Owner view; caller must already have verified profile ownership. */
 export async function listCommentsForOwner(context: Ctx, profileId: string): Promise<ModerationComment[]> {
   return db(context)<ModerationComment[]>`
-    SELECT c.id, c.body, c.created_at, c.author_id, u.display_name AS author_name, c.status,
+    SELECT c.id, c.body, c.created_at, c.author_id, u.display_name AS author_name,
+           CASE WHEN u.pref_comment_avatar THEN u.avatar_media_id END AS author_avatar, c.status,
            (SELECT count(*)::int FROM comment_reports r WHERE r.comment_id = c.id) AS reports
     FROM comments c JOIN users u ON u.id = c.author_id
     WHERE c.profile_id = ${profileId}

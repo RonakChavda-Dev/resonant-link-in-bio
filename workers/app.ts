@@ -25,7 +25,7 @@ function contentSecurityPolicy(nonce: string, dev: boolean, secure: boolean) {
     "font-src 'self'",
     dev ? "connect-src 'self' ws: wss:" : "connect-src 'self'",
     `frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com https://open.spotify.com https://w.soundcloud.com ${turnstile}`,
-    "media-src 'self'",
+    "media-src 'self' https:", // profile music may be a pasted https:// audio link
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'self'",

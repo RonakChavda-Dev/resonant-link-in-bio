@@ -1,11 +1,15 @@
 import { useRef, useState } from "react";
-import { mediaUrl } from "~/components/profile/ProfileView";
+// Same URL shape as ProfileView's mediaUrl; inlined so Settings can reuse this
+// picker without pulling in the profile renderer.
+const mediaUrl = (id: string) => `/media/${id}`;
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 
 export interface MediaItem {
   id: string;
+  /** Defaults to "image". Audio uploads are used only by the music settings. */
+  kind?: "image" | "audio";
 }
 
 export async function uploadImage(file: File, csrf: string): Promise<{ id: string } | { error: string }> {

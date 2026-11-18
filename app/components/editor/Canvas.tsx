@@ -16,9 +16,12 @@ interface Props {
   onMove: (from: number, to: number) => void;
   onDuplicate: (id: string) => void;
   onRemove: (id: string) => void;
+  /** Page being edited (null = home) and page-tab clicks in the preview. */
+  pageId?: string | null;
+  onNavigate?: (pageId: string | null) => void;
 }
 
-export function Canvas({ doc, selectedId, onSelect, onMove, onDuplicate, onRemove }: Props) {
+export function Canvas({ doc, selectedId, onSelect, onMove, onDuplicate, onRemove, pageId, onNavigate }: Props) {
   const ids = doc.blocks.map((b) => `c:${b.id}`);
   return (
     <SortableContext items={ids} strategy={verticalListSortingStrategy}>
@@ -31,6 +34,8 @@ export function Canvas({ doc, selectedId, onSelect, onMove, onDuplicate, onRemov
         <ProfileView
           doc={doc}
           mode="preview"
+          pageId={pageId}
+          onNavigate={onNavigate}
           renderBlock={(block, index, node) => (
             <CanvasBlock
               block={block}

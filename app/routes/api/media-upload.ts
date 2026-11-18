@@ -1,10 +1,10 @@
-// POST /api/media — authenticated image upload to private R2 storage.
+// POST /api/media — authenticated image or audio upload to private R2 storage.
 import type { Route } from "./+types/media-upload";
 import { db, getEnv } from "~/server/db.server";
 import { sessionContext } from "~/server/context";
 import { verifyCsrf } from "~/server/session.server";
 import { checkRateLimit } from "~/server/rate-limit.server";
-import { MAX_MEDIA_PER_USER, MAX_UPLOAD_BYTES, sniffImageType } from "~/server/media.server";
+import { MAX_AUDIO_BYTES, MAX_MEDIA_PER_USER, MAX_UPLOAD_BYTES, sniffAudioType, sniffImageType } from "~/server/media.server";
 
 const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -21,7 +21,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   // Reject oversize bodies before reading them (multipart overhead allowance).
   const declared = Number(request.headers.get("content-length") ?? "0");
-  if (declared > MAX_UPLOAD_BYTES + 64 * 1024) return json({ error: "Images must be 5 MB or smaller." }, 413);
+  if (declared > MAX_AUDIO_BYTES + 64 * 1024) return json({ error: "Files must be 10 MB or smaller (images 5 MB)." }, 413);
 
   const limit = await checkRateLimit(context, { key: `upload:user:${session.user.id}`, limit: 40, windowSeconds: 3600 });
   if (!limit.ok) return json({ error: "Too many uploads. Try again later." }, 429);
@@ -37,12 +37,19 @@ export async function action({ request, context }: Route.ActionArgs) {
     return json({ error: "Upload could not be read." }, 400);
   }
   const file = form.get("file");
-  if (!(file instanceof File)) return json({ error: "Choose an image to upload." }, 400);
-  if (file.size === 0 || file.size > MAX_UPLOAD_BYTES) return json({ error: "Images must be 5 MB or smaller." }, 413);
+  // "audio" uploads come from the music settings; everything else is an image.
+  const wantAudio = form.get("kind") === "audio";
+  if (!(file instanceof File)) return json({ error: wantAudio ? "Choose a song to upload." : "Choose an image to upload." }, 400);
+  const maxBytes = wantAudio ? MAX_AUDIO_BYTES : MAX_UPLOAD_BYTES;
+  if (file.size === 0 || file.size > maxBytes) {
+    return json({ error: wantAudio ? "Songs must be 10 MB or smaller." : "Images must be 5 MB or smaller." }, 413);
+  }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const type = sniffImageType(bytes);
-  if (!type) return json({ error: "That file isn't a PNG, JPEG, WebP or GIF image." }, 415);
+  const type = wantAudio ? sniffAudioType(bytes) : sniffImageType(bytes);
+  if (!type) {
+    return json({ error: wantAudio ? "That file isn't an MP3, M4A, OGG or WAV audio file." : "That file isn't a PNG, JPEG, WebP or GIF image." }, 415);
+  }
 
   const id = crypto.randomUUID();
   const key = `u/${session.user.id}/${id}`;

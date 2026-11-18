@@ -3,7 +3,7 @@
 // (palette, accent, backdrop and effect changes). The shared renderer draws
 // all of them. Counts shown in the UI are computed from this file.
 // All copy is sample content for fictional people; links are example.com.
-import { DOCUMENT_VERSION, newBlockId } from "./block-registry";
+import { DEFAULT_MUSIC, DEFAULT_NAV, DOCUMENT_VERSION, newBlockId } from "./block-registry";
 import type { Block, ProfileDocument } from "./blocks";
 import { ACCENTS, DEFAULT_EFFECTS, PRESETS, type AccentId, type EffectSettings, type PresetId, type ThemeSettings } from "./themes";
 import type { BackdropId } from "./backdrops";
@@ -697,6 +697,9 @@ function buildDocument(base: BaseDef, cw: Colourway): ProfileDocument {
     seo: { title: "", description: "" },
     // Stable ids keep server and client renders identical; they are re-issued on use.
     blocks: base.blocks.map((b, i) => ({ ...structuredClone(b), id: `tpl${String(i).padStart(4, "0")}` }) as Block),
+    pages: [],
+    nav: { ...DEFAULT_NAV },
+    music: { ...DEFAULT_MUSIC },
   };
 }
 

@@ -17,6 +17,8 @@
   color: var(--rp-text);
   font-family: var(--rp-font-body);
   overflow: hidden;
+  /* clip (not hidden) so sticky children — page tabs, the split aside — still stick. */
+  overflow: clip;
   -webkit-font-smoothing: antialiased;
 }
 .rp[data-glass="on"] {
@@ -49,16 +51,11 @@
 .rp-backdrop-art, .rp-backdrop-img { position: absolute; inset: -2% -2% -2% -2%; background-repeat: repeat; }
 .rp-backdrop-img { background-size: cover; background-position: center; background-repeat: no-repeat; }
 .rp-backdrop-dim { position: absolute; inset: 0; background: var(--rp-bg); }
-.rp[data-parallax="on"][data-mode="public"] .rp-backdrop-art,
-.rp[data-parallax="on"][data-mode="public"] .rp-backdrop-img { position: fixed; inset: -5%; }
-@supports (animation-timeline: scroll()) {
-  .rp[data-parallax="on"][data-mode="preview"] .rp-backdrop-art,
-  .rp[data-parallax="on"][data-mode="preview"] .rp-backdrop-img {
-    animation: rp-parallax linear both; animation-timeline: scroll(nearest); inset: -20% 0;
-  }
-}
-/* ±10% of a box 40% taller than the frame, so its edge never comes into view. */
-@keyframes rp-parallax { from { transform: translateY(-10%); } to { transform: translateY(10%); } }
+/* Parallax: ProfileView sets --rp-par to ~55% of the distance scrolled, so the
+   background moves at under half the speed of the content. The layer always
+   covers the visible area: it moves down by less than the page scrolls. */
+.rp-par { position: absolute; inset: 0; }
+.rp[data-parallax="on"] .rp-par { transform: translate3d(0, var(--rp-par, 0px), 0); will-change: transform; }
 .rp-backdrop-art[data-anim="drift"] { animation: rp-drift 18s ease-in-out infinite alternate; inset: -12%; }
 .rp-backdrop-art[data-anim="pan"] { animation: rp-pan 40s linear infinite; }
 .rp-backdrop-art[data-anim="sweep"] { animation: rp-sweep 20s ease-in-out infinite alternate; }
@@ -430,7 +427,9 @@ a.rp-project:hover .rp-project-media img { transform: scale(1.04); }
   .rp-ring { display: none; }
   .rp-marquee-track { flex-wrap: wrap; width: auto; }
   .rp-marquee-half + .rp-marquee-half { display: none; }
-  .rp[data-parallax="on"] .rp-backdrop-art, .rp[data-parallax="on"] .rp-backdrop-img { position: absolute !important; }
+  .rp[data-parallax="on"] .rp-par { transform: none !important; }
+  .rp[data-card] :is(.rp-link, .rp-btn, .rp-social, .rp-project, .rp-video, .rp-callout, .rp-quote[data-variant="card"], .rp-faq details, .rp-stat, .rp-contact, .rp-countdown, .rp-clock, .rp-intro[data-variant="card"], .rp-gallery li, .rp-figure) { transform: none !important; }
+  .rp-gate, .rp-gate * { transition: none !important; animation: none !important; }
 }
 
 /* Custom code block (sandboxed frame) */
@@ -486,3 +485,161 @@ a.rp-project:hover .rp-project-media img { transform: scale(1.04); }
   .rp[data-tilt="on"] .rp-inner { transform: none !important; }
   .rp.rp-io .rp-b:not(.in) { opacity: 1; }
 }
+
+
+/* --- Card effects (theme.effects.card) --------------------------------------
+   Applied to every "card" on the page. Keep the selector list in sync with
+   CARD_SELECTOR in ProfileView.tsx. Pointer-following effects read --px/--py
+   (0–1, set by ProfileView while hovered, along with .rp-fx-on); float, lean
+   and swing are pure CSS :hover. Card effects take priority over the button
+   hover effect's movement. Off in thumbnails and under reduced motion. */
+.rp:not([data-card="none"]):not([data-mode="thumbnail"]) :is(.rp-link, .rp-btn, .rp-social, .rp-project, .rp-video, .rp-callout, .rp-quote[data-variant="card"], .rp-faq details, .rp-stat, .rp-contact, .rp-countdown, .rp-clock, .rp-intro[data-variant="card"], .rp-gallery li, .rp-figure) {
+  position: relative;
+  transition: transform .55s cubic-bezier(0.22, 1, 0.36, 1), box-shadow .4s ease, translate .55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rp .rp-fx-on { transition-duration: .12s, .4s, .12s !important; z-index: 1; }
+
+/* 3D tilt family: tilt, glare, holo, depth */
+.rp:is([data-card="tilt"], [data-card="glare"], [data-card="holo"], [data-card="depth"]) .rp-fx-on {
+  transform: perspective(700px) rotateX(calc((0.5 - var(--py, 0.5)) * 14deg)) rotateY(calc((var(--px, 0.5) - 0.5) * 16deg)) scale(1.025) !important;
+  box-shadow: 0 22px 40px -22px color-mix(in oklab, #000 75%, transparent);
+}
+.rp[data-card="depth"] .rp-fx-on { transform-style: preserve-3d; }
+.rp[data-card="depth"] :is(.rp-link, .rp-btn, .rp-social, .rp-project, .rp-video, .rp-callout, .rp-quote, .rp-faq details, .rp-stat, .rp-contact, .rp-countdown, .rp-clock, .rp-intro, .rp-gallery li, .rp-figure) > * { transition: transform .55s cubic-bezier(0.22, 1, 0.36, 1); }
+.rp[data-card="depth"] .rp-fx-on > * { transform: translateZ(28px); transition-duration: .2s; }
+
+/* Light layers (glare, holo, spotlight, border) share one ::after. */
+.rp:is([data-card="glare"], [data-card="holo"], [data-card="spotlight"], [data-card="border"]) :where(.rp-link, .rp-btn, .rp-social, .rp-project, .rp-video, .rp-callout, .rp-quote[data-variant="card"], .rp-faq details, .rp-stat, .rp-contact, .rp-countdown, .rp-clock, .rp-intro[data-variant="card"], .rp-gallery li, .rp-figure)::after {
+  /* :where keeps this low-specificity so the .rp-fx-on rules below win. */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  opacity: 0; transform: none; transition: opacity .35s ease;
+}
+.rp:is([data-card="glare"], [data-card="holo"], [data-card="spotlight"], [data-card="border"]) .rp-fx-on::after { opacity: 1; }
+.rp[data-card="glare"] .rp-fx-on::after {
+  background: radial-gradient(circle at calc(var(--px, .5) * 100%) calc(var(--py, .5) * 100%), color-mix(in oklab, white 32%, transparent), transparent 55%);
+}
+.rp[data-card="holo"] .rp-fx-on::after {
+  background:
+    linear-gradient(115deg, transparent 20%, #ff7ad9 32%, #7af0ff 44%, #b6ff7a 56%, #ffd27a 68%, transparent 80%)
+    calc(var(--px, .5) * 100%) calc(var(--py, .5) * 100%) / 220% 220%;
+  mix-blend-mode: color-dodge; opacity: .38;
+}
+.rp[data-card="spotlight"] .rp-fx-on::after {
+  background: radial-gradient(circle 11rem at calc(var(--px, .5) * 100%) calc(var(--py, .5) * 100%), color-mix(in oklab, var(--rp-accent) 24%, transparent), transparent 70%);
+}
+.rp[data-card="border"] .rp-fx-on::after {
+  padding: 1.5px;
+  background: radial-gradient(circle 9rem at calc(var(--px, .5) * 100%) calc(var(--py, .5) * 100%), var(--rp-accent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.rp[data-card="border"] .rp-fx-on { box-shadow: 0 0 28px -12px var(--rp-accent); }
+
+/* Magnetic: drifts towards the pointer. */
+.rp[data-card="magnetic"] .rp-fx-on {
+  transform: translate(calc((var(--px, .5) - .5) * 14px), calc((var(--py, .5) - .5) * 10px)) !important;
+}
+
+/* CSS-only hover effects */
+.rp[data-card="float"]:not([data-mode="thumbnail"]) :is(.rp-link, .rp-btn, .rp-social, .rp-project, .rp-video, .rp-callout, .rp-quote[data-variant="card"], .rp-faq details, .rp-stat, .rp-contact, .rp-countdown, .rp-clock, .rp-intro[data-variant="card"], .rp-gallery li, .rp-figure):hover {
+  transform: translateY(-6px) !important;
+  box-shadow: 0 26px 40px -24px color-mix(in oklab, #000 80%, transparent);
+}
+.rp[data-card="lean"]:not([data-mode="thumbnail"]) :is(.rp-link, .rp-btn, .rp-social, .rp-project, .rp-video, .rp-callout, .rp-quote[data-variant="card"], .rp-faq details, .rp-stat, .rp-contact, .rp-countdown, .rp-clock, .rp-intro[data-variant="card"], .rp-gallery li, .rp-figure):hover {
+  transform: perspective(700px) rotateX(9deg) translateY(-3px) !important;
+  transform-origin: 50% 100%;
+  box-shadow: 0 30px 30px -26px color-mix(in oklab, #000 80%, transparent);
+}
+.rp[data-card="swing"]:not([data-mode="thumbnail"]) :is(.rp-link, .rp-btn, .rp-social, .rp-project, .rp-video, .rp-callout, .rp-quote[data-variant="card"], .rp-faq details, .rp-stat, .rp-contact, .rp-countdown, .rp-clock, .rp-intro[data-variant="card"], .rp-gallery li, .rp-figure):hover {
+  transform-origin: 50% 0;
+  animation: rp-swing 1.1s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes rp-swing {
+  0% { transform: rotate(0); } 20% { transform: rotate(2.6deg); } 40% { transform: rotate(-2deg); }
+  60% { transform: rotate(1.2deg); } 80% { transform: rotate(-.6deg); } 100% { transform: rotate(0); }
+}
+
+/* --- Pages: navigation and stacked page cards ------------------------------ */
+.rp-nav { position: sticky; top: .75rem; z-index: 5; display: flex; justify-content: center; margin-bottom: .6rem; }
+.rp-split > .rp-nav { grid-column: 1 / -1; }
+.rp-nav ul {
+  display: flex; gap: .2rem; max-width: 100%; overflow-x: auto; scrollbar-width: none; list-style: none; margin: 0;
+  padding: .3rem; border-radius: 999px;
+  background: color-mix(in oklab, var(--rp-surface) 78%, transparent);
+  border: 1px solid var(--rp-card-border);
+  backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  box-shadow: 0 10px 30px -18px color-mix(in oklab, #000 80%, transparent);
+}
+.rp-nav ul::-webkit-scrollbar { display: none; }
+.rp-nav a {
+  display: block; white-space: nowrap; padding: .42rem .95rem; border-radius: 999px;
+  font-size: .86rem; font-weight: 560; color: var(--rp-muted); text-decoration: none;
+  transition: color .2s ease, background-color .25s ease;
+}
+.rp-nav a:hover { color: var(--rp-text); }
+.rp-nav a[aria-current] { color: var(--rp-accent-ink); background: var(--rp-accent); }
+.rp-nav a:focus-visible { outline: 2px solid var(--rp-accent); outline-offset: 2px; }
+
+.rp-sheet {
+  display: flex; flex-direction: column; gap: var(--rp-gap);
+  margin-top: 2.2rem; padding: 1.6rem 1.25rem 1.4rem; scroll-margin-top: 4.5rem;
+  border-radius: min(var(--rp-radius), 1.6rem);
+  background: color-mix(in oklab, var(--rp-card-bg) 70%, transparent);
+  border: 1px solid var(--rp-card-border);
+  backdrop-filter: var(--rp-card-blur); -webkit-backdrop-filter: var(--rp-card-blur);
+}
+.rp-split > .rp-sheet { grid-column: 1 / -1; }
+.rp-sheet-title {
+  margin: 0 0 .4rem; font-family: var(--rp-font-display); font-weight: var(--rp-display-weight);
+  font-size: 1.45rem; letter-spacing: -0.02em; line-height: 1.15;
+}
+html:has(.rp-sheet) { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html:has(.rp-sheet) { scroll-behavior: auto; } }
+
+/* --- Music: click-to-enter screen and mini player (outside .rp) ------------ */
+.rp-music { font-family: var(--rp-font-body); color: var(--rp-text); }
+.rp-gate {
+  position: fixed; inset: 0; z-index: 60;
+  background: color-mix(in oklab, var(--rp-bg) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  animation: rp-gate-in .5s ease both;
+}
+@keyframes rp-gate-in { from { opacity: 0; } }
+.rp-gate-btn {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .9rem;
+  width: 100%; border: 0; background: none; color: inherit; cursor: pointer; font: inherit;
+}
+.rp-gate-text {
+  font-family: var(--rp-font-display); font-weight: var(--rp-display-weight);
+  font-size: clamp(1.4rem, 5vw, 2.4rem); letter-spacing: -0.02em;
+  animation: rp-gate-breathe 2.6s ease-in-out infinite;
+}
+@keyframes rp-gate-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+.rp-gate-note { font-size: .8rem; color: var(--rp-muted); }
+.rp-gate-btn:focus-visible .rp-gate-text { outline: 2px solid var(--rp-accent); outline-offset: 8px; border-radius: 6px; }
+.rp-gate-quiet {
+  position: absolute; left: 50%; bottom: max(1.5rem, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  border: 0; background: none; color: var(--rp-muted); font: inherit; font-size: .8rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+  padding: .5rem .75rem;
+}
+.rp-gate-quiet:hover { color: var(--rp-text); }
+.rp-player {
+  position: fixed; z-index: 50; left: 50%; bottom: max(1rem, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: .35rem; max-width: calc(100vw - 2rem);
+  padding: .3rem; border-radius: 999px;
+  background: color-mix(in oklab, var(--rp-surface) 82%, transparent);
+  border: 1px solid var(--rp-border);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 14px 34px -18px color-mix(in oklab, #000 85%, transparent);
+  animation: rp-player-in .5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes rp-player-in { from { opacity: 0; transform: translate(-50%, 12px); } }
+.rp-player-btn {
+  display: grid; place-items: center; width: 2.1rem; height: 2.1rem; flex: none; border-radius: 999px;
+  border: 0; background: color-mix(in oklab, var(--rp-text) 10%, transparent); color: var(--rp-text); cursor: pointer;
+}
+.rp-player-btn:hover:not(:disabled) { background: var(--rp-accent); color: var(--rp-accent-ink); }
+.rp-player-btn:disabled { opacity: .45; cursor: default; }
+.rp-player-btn:focus-visible { outline: 2px solid var(--rp-accent); outline-offset: 2px; }
+.rp-player-title { min-width: 0; max-width: 14rem; padding-inline: .3rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; color: var(--rp-muted); }

@@ -157,3 +157,20 @@ export function platformFor(href: string): { name: string; short: string } {
   for (const [re, name, short] of table) if (re.test(host)) return { name, short };
   return { name: host || "Website", short: "↗" };
 }
+
+/**
+ * A pasted song URL for the profile music player: https only, no credentials,
+ * no fragments, at most 2048 characters. The file is fetched by the visitor's
+ * browser through an <audio> element, which can't run code; the CSP's
+ * media-src allows https: for exactly this.
+ */
+export function isSafeAudioUrl(value: string): boolean {
+  if (value.length > 2048 || /\s/.test(value)) return false;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  return url.protocol === "https:" && !url.username && !url.password && !url.hash && url.href === value;
+}

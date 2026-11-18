@@ -2,7 +2,8 @@ import { Link } from "react-router";
 import type { Route } from "./+types/features";
 import { seo } from "~/lib/seo";
 import { PageHeader } from "~/components/ui/PageHeader";
-import { ACCENTS, BUTTON_STYLES, ENTRANCES, FONTS, HOVERS, NAME_STYLES, OVERLAYS, PRESETS } from "~/lib/themes";
+import { ACCENTS, BUTTON_STYLES, CARD_EFFECTS, ENTRANCES, FONTS, HOVERS, NAME_STYLES, OVERLAYS, PRESETS } from "~/lib/themes";
+import { MAX_PAGES } from "~/lib/block-registry";
 import { BACKDROP_IDS } from "~/lib/backdrops";
 import { BLOCK_REGISTRY, BLOCK_TYPES } from "~/lib/block-registry";
 import { COMPONENT_COUNT } from "~/lib/components";
@@ -29,6 +30,7 @@ const SECTIONS = [
       "The canvas opens at the width of the device you're editing on; switch between mobile and desktop at any time.",
       "Drafts save automatically a moment after you stop typing, and the save state is always shown.",
       "Every field is validated as you type and again on the server, with clear messages.",
+      "Set your avatar, short bio and social links once in Settings, then drop them into any page's intro or social links with one click — or have new pages start with them.",
     ],
   },
   {
@@ -47,7 +49,7 @@ const SECTIONS = [
     points: [
       `${Object.keys(PRESETS).length} palettes, ${Object.keys(ACCENTS).length} accent colours and ${Object.keys(FONTS).length} typefaces.`,
       `Backgrounds: upload your own image (with dim and blur), or choose from ${BACKDROP_IDS.length} built-in backgrounds — ruled notebook paper, aurora, holographic, mesh gradients, starfields and patterns.`,
-      `Effects: glassmorphism cards, parallax backgrounds, animated backgrounds, ${ENTRANCES.length - 1} entrance animations, ${HOVERS.length - 1} hover effects, ${NAME_STYLES.length - 1} name styles and ${OVERLAYS.length - 1} overlays.`,
+      `Effects: glassmorphism cards, parallax backgrounds, animated backgrounds, ${ENTRANCES.length - 1} entrance animations, ${CARD_EFFECTS.length - 1} card hover effects (3D tilt, glare, holographic foil, magnetic and more), ${HOVERS.length - 1} button hover effects, ${NAME_STYLES.length - 1} name styles and ${OVERLAYS.length - 1} overlays.`,
       `${BUTTON_STYLES.length} button styles, three corner styles and three layouts, including a two-column portfolio layout on wide screens.`,
       "A glass panel layout that floats your whole page over your own background, an optional 3D tilt that follows the cursor, and a live clock block that shows visitors your local time.",
       "Blocks blur into view as visitors scroll. Every animation is decorative and switches off for visitors who prefer reduced motion.",
@@ -59,6 +61,8 @@ const SECTIONS = [
     title: "Publishing you control",
     points: [
       "Your page lives at a short address: /@yourhandle. Handles are checked for format and reserved words.",
+      `Add up to ${MAX_PAGES} more pages. Give each its own address (/@yourhandle/work) with tabs to switch, or stack them as cards on one long scrolling page.`,
+      "Optional music: upload a song or link an audio file. Visitors see a “click to enter” screen first (browsers only allow sound after a click) and can pause or mute at any time.",
       "Editing never changes the live page. Publish when you're ready; each publish is stored as a numbered revision.",
       "Unpublish at any time — the address then answers “gone” instead of showing old content.",
       "Choose whether search engines may index your page.",

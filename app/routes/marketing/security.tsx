@@ -55,8 +55,14 @@ export default function Security() {
 
         <h2>Uploads</h2>
         <ul>
-          <li>Images up to 5 MB in PNG, JPEG, WebP or GIF format. The file's actual signature bytes are checked, not just its name.</li>
+          <li>Images up to 5 MB in PNG, JPEG, WebP or GIF format, and songs up to 10 MB in MP3, M4A, OGG or WAV format. The file's actual signature bytes are checked, not just its name.</li>
           <li>SVG and other active formats are refused. Files are stored in private object storage and served with <code>nosniff</code> and a locked-down content policy.</li>
+        </ul>
+
+        <h2>Profile music</h2>
+        <ul>
+          <li>Music never starts on its own: visitors choose to enter (with or without sound) and can pause or mute at any time.</li>
+          <li>A pasted song link must be an <code>https://</code> address and is played by an audio element, which cannot run code.</li>
         </ul>
 
         <h2>Browser protections</h2>

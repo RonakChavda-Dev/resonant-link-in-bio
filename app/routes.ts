@@ -43,5 +43,7 @@ export default [
   // Public profiles: canonical /@handle, with /@/handle redirecting to it.
   route("@/:handle", "routes/profile-redirect.ts"),
   route(":handle", "routes/profile.tsx"),
+  // Extra pages of a site (tabs mode). Same module, so it needs its own route id.
+  route(":handle/:page", "routes/profile.tsx", { id: "routes/profile-page" }),
   route("*", "routes/not-found.tsx"),
 ] satisfies RouteConfig;

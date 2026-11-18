@@ -6,7 +6,7 @@ import { db } from "./db.server";
 import type { Sql } from "postgres";
 
 type JSONValue = Parameters<Sql["json"]>[0];
-import { describeIssues, documentSchema, referencedMedia, upgradeDocument, upgradeTrusted, type ProfileDocument } from "~/lib/blocks";
+import { describeIssues, documentSchema, referencedAudio, referencedMedia, upgradeDocument, upgradeTrusted, type ProfileDocument } from "~/lib/blocks";
 import { handleProblem, normalizeHandle } from "~/lib/handles";
 
 type Ctx = Readonly<RouterContextProvider>;
@@ -76,15 +76,23 @@ export async function validateDocument(context: Ctx, ownerId: string, input: unk
   input = upgradeDocument(input);
   const parsed = documentSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, errors: describeIssues(parsed.error, input as { blocks?: { type?: string }[] }) };
+    return { ok: false, errors: describeIssues(parsed.error, input as Parameters<typeof describeIssues>[1]) };
   }
+  // Every referenced upload must belong to the owner and be the right kind
+  // (images where images go, audio for the music player).
   const mediaIds = referencedMedia(parsed.data);
   if (mediaIds.length) {
     const rows = await db(context)<{ id: string }[]>`
-      SELECT id FROM media WHERE owner_id = ${ownerId} AND id = ANY(${mediaIds}::uuid[])`;
+      SELECT id FROM media WHERE owner_id = ${ownerId} AND id = ANY(${mediaIds}::uuid[]) AND content_type LIKE 'image/%'`;
     if (rows.length !== mediaIds.length) {
       return { ok: false, errors: ["One or more images are missing. Re-upload them and try again."] };
     }
+  }
+  const audioId = referencedAudio(parsed.data);
+  if (audioId) {
+    const [row] = await db(context)<{ id: string }[]>`
+      SELECT id FROM media WHERE owner_id = ${ownerId} AND id = ${audioId} AND content_type LIKE 'audio/%'`;
+    if (!row) return { ok: false, errors: ["The uploaded song is missing. Upload it again and try again."] };
   }
   return { ok: true, doc: parsed.data };
 }
@@ -94,10 +102,10 @@ export async function countProfiles(context: Ctx, ownerId: string): Promise<numb
   return row.n;
 }
 
-export async function createProfile(context: Ctx, ownerId: string, handle: string, doc: ProfileDocument) {
+export async function createProfile(context: Ctx, ownerId: string, handle: string, doc: ProfileDocument, commentsEnabled = false) {
   const [row] = await db(context)<{ id: string }[]>`
-    INSERT INTO profiles (owner_id, handle, draft)
-    VALUES (${ownerId}, ${handle}, ${db(context).json(asJson(doc))})
+    INSERT INTO profiles (owner_id, handle, draft, comments_enabled)
+    VALUES (${ownerId}, ${handle}, ${db(context).json(asJson(doc))}, ${commentsEnabled})
     ON CONFLICT (handle) DO NOTHING
     RETURNING id`;
   return row?.id ?? null;

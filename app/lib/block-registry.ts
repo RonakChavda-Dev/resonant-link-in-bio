@@ -7,6 +7,53 @@ import { CODE_STARTERS } from "./code-starters";
 
 export const DOCUMENT_VERSION = 2;
 export const MAX_BLOCKS = 80;
+/** Extra pages besides the home page. */
+export const MAX_PAGES = 8;
+export const PAGE_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/;
+
+export type NavMode = "tabs" | "stack";
+export interface NavSettings {
+  /** "tabs": each page has its own address (/@handle/slug). "stack": all pages on one address, as cards you scroll through. */
+  mode: NavMode;
+  /** Name of the home page in the navigation. */
+  homeLabel: string;
+}
+export type MusicSource = "none" | "upload" | "url";
+export interface MusicSettings {
+  source: MusicSource;
+  /** Uploaded audio (source "upload"). */
+  media: string | null;
+  /** Direct https link to an audio file (source "url"). */
+  url: string;
+  /** Optional song title shown in the player. */
+  title: string;
+  /** Text on the click-to-enter screen. */
+  enterText: string;
+  /** 0-100. */
+  volume: number;
+}
+export const DEFAULT_NAV: NavSettings = { mode: "tabs", homeLabel: "Home" };
+export const DEFAULT_MUSIC: MusicSettings = { source: "none", media: null, url: "", title: "", enterText: "click to enter", volume: 60 };
+
+/** "About me" -> "about-me" (for new page addresses). */
+export function slugify(title: string): string {
+  return (
+    title
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 32)
+      .replace(/-+$/, "") || "page"
+  );
+}
+
+/** True when the document has music that would actually play. */
+export function hasMusic(doc: ProfileDocument): boolean {
+  const m = doc.music;
+  return (m.source === "upload" && !!m.media) || (m.source === "url" && !!m.url);
+}
 
 export type BlockCategory = "Profile" | "Links" | "Text" | "Media" | "Portfolio" | "Layout" | "Code";
 export const BLOCK_CATEGORIES: BlockCategory[] = ["Profile", "Links", "Text", "Media", "Portfolio", "Layout", "Code"];
@@ -153,7 +200,15 @@ export const BLOCK_TYPES = Object.keys(BLOCK_REGISTRY) as BlockType[];
 export function blankDocument(name = "Your name"): ProfileDocument {
   const intro = BLOCK_REGISTRY.intro.create();
   intro.name = name.slice(0, 60) || "Your name";
-  return { version: DOCUMENT_VERSION, theme: structuredClone(DEFAULT_THEME), seo: { title: "", description: "" }, blocks: [intro] };
+  return {
+    version: DOCUMENT_VERSION,
+    theme: structuredClone(DEFAULT_THEME),
+    seo: { title: "", description: "" },
+    blocks: [intro],
+    pages: [],
+    nav: { ...DEFAULT_NAV },
+    music: { ...DEFAULT_MUSIC },
+  };
 }
 
 export function profileTitle(doc: ProfileDocument, handle: string): string {
@@ -213,19 +268,28 @@ function upgradeBlockV1(b: Loose): Loose {
  */
 export function upgradeDocument(input: unknown): unknown {
   if (!isObj(input)) return input;
-  // v2 documents saved before newer effect options existed: fill in defaults.
+  // v2 documents saved before newer options existed (effects, pages, music): fill in defaults.
   if (input.version === 2 && isObj(input.theme) && isObj(input.theme.effects)) {
-    return { ...input, theme: { ...input.theme, effects: { ...DEFAULT_EFFECTS, ...input.theme.effects } } };
+    return withSiteDefaults({ ...input, theme: { ...input.theme, effects: { ...DEFAULT_EFFECTS, ...input.theme.effects } } });
   }
   if (input.version === 1 && isObj(input.theme) && Array.isArray(input.blocks)) {
-    return {
+    return withSiteDefaults({
       ...input,
       version: 2,
       theme: upgradeThemeV1(input.theme),
       blocks: input.blocks.map((b) => (isObj(b) ? upgradeBlockV1(b) : b)),
-    };
+    });
   }
   return input;
+}
+
+function withSiteDefaults(doc: Loose): Loose {
+  return {
+    ...doc,
+    pages: Array.isArray(doc.pages) ? doc.pages : [],
+    nav: isObj(doc.nav) ? { ...DEFAULT_NAV, ...doc.nav } : { ...DEFAULT_NAV },
+    music: isObj(doc.music) ? { ...DEFAULT_MUSIC, ...doc.music } : { ...DEFAULT_MUSIC },
+  };
 }
 
 /** Upgrade a document already known to be valid (e.g. from the database). */
